@@ -1,0 +1,847 @@
+from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Optional, List, Dict, Any
+import uvicorn
+import json
+import hmac
+import hashlib
+import httpx
+from datetime import datetime
+
+app = FastAPI(title="Digital University MAX Bot + Mini-App", version="2.0.0")
+
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# SECRET KEY для валидации MAX Bridge
+SECRET_KEY = "your-secret-key-change-in-production"
+
+# MAX Bot API Token (один и тот же для бота и mini-app)
+MAX_BOT_TOKEN = "your-max-bot-token-here"
+MAX_API_BASE = "https://api.max.ru/bot"
+
+# ============ МОДЕЛИ ДАННЫХ ============
+
+class User(BaseModel):
+    max_user_id: int
+    first_name: str
+    last_name: Optional[str] = None
+    username: Optional[str] = None
+    photo_url: Optional[str] = None
+    language_code: Optional[str] = None
+    role: Optional[str] = None
+    university_id: Optional[int] = 1
+
+class BotUpdate(BaseModel):
+    """Входящее обновление от MAX Bot"""
+    update_id: int
+    message: Optional[Dict] = None
+    callback_query: Optional[Dict] = None
+
+class InlineKeyboardButton(BaseModel):
+    text: str
+    callback_data: Optional[str] = None
+    url: Optional[str] = None
+    web_app: Optional[Dict[str, str]] = None
+
+class InlineKeyboardMarkup(BaseModel):
+    inline_keyboard: List[List[Dict]]
+
+# ============ ХРАНИЛИЩЕ (замените на БД) ============
+
+users_db = {}
+universities_db = {
+    1: {
+        "id": 1,
+        "name": "Российская академия народного хозяйства",
+        "short_name": "РАНХиГС",
+        "blocks_config": {
+            "student": ["profile", "schedule", "lms", "services", "life"],
+            "applicant": ["profile", "news", "admission", "payment"],
+            "employee": ["profile", "schedule", "services", "news"],
+            "admin": ["profile", "analytics", "config", "users", "all_blocks"]
+        }
+    }
+}
+
+# ============ MAX BOT API КЛИЕНТ ============
+
+class MAXBotAPI:
+    """Класс для работы с MAX Bot API"""
+    
+    def __init__(self, token: str):
+        self.token = token
+        self.base_url = MAX_API_BASE
+        self.headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+    
+    async def send_message(
+        self, 
+        user_id: int, 
+        text: str, 
+        reply_markup: Optional[Dict] = None
+    ):
+        """Отправка сообщения пользователю"""
+        async with httpx.AsyncClient() as client:
+            payload = {
+                "user_id": user_id,
+                "text": text,
+            }
+            if reply_markup:
+                payload["reply_markup"] = reply_markup
+            
+            response = await client.post(
+                f"{self.base_url}/sendMessage",
+                headers=self.headers,
+                json=payload
+            )
+            return response.json()
+    
+    async def answer_callback_query(
+        self, 
+        callback_query_id: str, 
+        text: Optional[str] = None,
+        show_alert: bool = False
+    ):
+        """Ответ на нажатие inline кнопки"""
+        async with httpx.AsyncClient() as client:
+            payload = {
+                "callback_query_id": callback_query_id,
+            }
+            if text:
+                payload["text"] = text
+            payload["show_alert"] = show_alert
+            
+            response = await client.post(
+                f"{self.base_url}/answerCallbackQuery",
+                headers=self.headers,
+                json=payload
+            )
+            return response.json()
+    
+    async def edit_message_text(
+        self,
+        user_id: int,
+        message_id: int,
+        text: str,
+        reply_markup: Optional[Dict] = None
+    ):
+        """Редактирование сообщения"""
+        async with httpx.AsyncClient() as client:
+            payload = {
+                "user_id": user_id,
+                "message_id": message_id,
+                "text": text,
+            }
+            if reply_markup:
+                payload["reply_markup"] = reply_markup
+            
+            response = await client.post(
+                f"{self.base_url}/editMessageText",
+                headers=self.headers,
+                json=payload
+            )
+            return response.json()
+
+bot_api = MAXBotAPI(MAX_BOT_TOKEN)
+
+# ============ INLINE КЛАВИАТУРЫ ============
+
+def get_role_selection_keyboard() -> Dict:
+    """Клавиатура выбора роли"""
+    return {
+        "inline_keyboard": [
+            [
+                {"text": "👨‍🎓 Студент", "callback_data": "role_student"},
+                {"text": "🎯 Абитуриент", "callback_data": "role_applicant"}
+            ],
+            [
+                {"text": "👔 Сотрудник", "callback_data": "role_employee"},
+                {"text": "⚙️ Администратор", "callback_data": "role_admin"}
+            ]
+        ]
+    }
+
+def get_main_menu_keyboard(role: str) -> Dict:
+    """Главное меню в зависимости от роли"""
+    
+    keyboards = {
+        "student": {
+            "inline_keyboard": [
+                [
+                    {"text": "👤 Профиль", "callback_data": "block_profile"},
+                    {"text": "📅 Расписание", "callback_data": "block_schedule"}
+                ],
+                [
+                    {"text": "📚 Материалы", "callback_data": "block_lms"},
+                    {"text": "📝 Услуги", "callback_data": "block_services"}
+                ],
+                [
+                    {"text": "🎉 Жизнь", "callback_data": "block_life"},
+                    {"text": "💳 Оплата", "callback_data": "block_payment"}
+                ],
+                [
+                    {"text": "🌐 Открыть приложение", "web_app": {"url": "https://YOUR_USERNAME.github.io/max-university/?role=student"}}
+                ]
+            ]
+        },
+        "applicant": {
+            "inline_keyboard": [
+                [
+                    {"text": "👤 Профиль", "callback_data": "block_profile"},
+                    {"text": "📰 Новости", "callback_data": "block_news"}
+                ],
+                [
+                    {"text": "📄 Поступление", "callback_data": "block_admission"},
+                    {"text": "💳 Оплата", "callback_data": "block_payment"}
+                ],
+                [
+                    {"text": "🌐 Открыть приложение", "web_app": {"url": "https://YOUR_USERNAME.github.io/max-university/?role=applicant"}}
+                ]
+            ]
+        },
+        "employee": {
+            "inline_keyboard": [
+                [
+                    {"text": "👤 Профиль", "callback_data": "block_profile"},
+                    {"text": "📅 График", "callback_data": "block_schedule"}
+                ],
+                [
+                    {"text": "📝 Заявки", "callback_data": "block_services"},
+                    {"text": "📰 Новости", "callback_data": "block_news"}
+                ],
+                [
+                    {"text": "🌐 Открыть приложение", "web_app": {"url": "https://YOUR_USERNAME.github.io/max-university/?role=employee"}}
+                ]
+            ]
+        },
+        "admin": {
+            "inline_keyboard": [
+                [
+                    {"text": "📊 Аналитика", "callback_data": "block_analytics"},
+                    {"text": "⚙️ Настройки", "callback_data": "block_config"}
+                ],
+                [
+                    {"text": "👥 Пользователи", "callback_data": "block_users"},
+                    {"text": "📰 Новости", "callback_data": "block_news"}
+                ],
+                [
+                    {"text": "🌐 Панель администратора", "web_app": {"url": "https://YOUR_USERNAME.github.io/max-university/?role=admin"}}
+                ]
+            ]
+        }
+    }
+    
+    return keyboards.get(role, keyboards["student"])
+
+def get_quick_actions_keyboard(action: str) -> Dict:
+    """Быстрые действия для каждого блока"""
+    
+    keyboards = {
+        "schedule": {
+            "inline_keyboard": [
+                [
+                    {"text": "📅 Сегодня", "callback_data": "schedule_today"},
+                    {"text": "🗓️ Неделя", "callback_data": "schedule_week"}
+                ],
+                [
+                    {"text": "⏰ Следующее занятие", "callback_data": "schedule_next"},
+                    {"text": "🔄 Изменения", "callback_data": "schedule_changes"}
+                ],
+                [
+                    {"text": "🌐 Открыть полное расписание", "web_app": {"url": "https://YOUR_USERNAME.github.io/max-university/schedule"}}
+                ],
+                [
+                    {"text": "« Назад в меню", "callback_data": "back_to_menu"}
+                ]
+            ]
+        },
+        "lms": {
+            "inline_keyboard": [
+                [
+                    {"text": "📚 Мои курсы", "callback_data": "lms_courses"},
+                    {"text": "📝 Задания", "callback_data": "lms_assignments"}
+                ],
+                [
+                    {"text": "⏰ Дедлайны", "callback_data": "lms_deadlines"},
+                    {"text": "📖 Библиотека", "callback_data": "lms_library"}
+                ],
+                [
+                    {"text": "🌐 Открыть LMS", "web_app": {"url": "https://YOUR_USERNAME.github.io/max-university/courses"}}
+                ],
+                [
+                    {"text": "« Назад в меню", "callback_data": "back_to_menu"}
+                ]
+            ]
+        },
+        "profile": {
+            "inline_keyboard": [
+                [
+                    {"text": "🎓 Студенческий билет", "callback_data": "profile_card"},
+                    {"text": "📊 Статистика", "callback_data": "profile_stats"}
+                ],
+                [
+                    {"text": "⚙️ Настройки", "callback_data": "profile_settings"}
+                ],
+                [
+                    {"text": "🌐 Открыть профиль", "web_app": {"url": "https://YOUR_USERNAME.github.io/max-university/profile"}}
+                ],
+                [
+                    {"text": "« Назад в меню", "callback_data": "back_to_menu"}
+                ]
+            ]
+        },
+        "services": {
+            "inline_keyboard": [
+                [
+                    {"text": "📄 Заказать справку", "callback_data": "services_certificate"},
+                    {"text": "📝 Подать заявление", "callback_data": "services_application"}
+                ],
+                [
+                    {"text": "💳 Оплата", "callback_data": "services_payment"},
+                    {"text": "🎫 Пропуск", "callback_data": "services_pass"}
+                ],
+                [
+                    {"text": "🌐 Все услуги", "web_app": {"url": "https://YOUR_USERNAME.github.io/max-university/services"}}
+                ],
+                [
+                    {"text": "« Назад в меню", "callback_data": "back_to_menu"}
+                ]
+            ]
+        },
+        "life": {
+            "inline_keyboard": [
+                [
+                    {"text": "🎉 События сегодня", "callback_data": "life_events_today"},
+                    {"text": "📰 Новости", "callback_data": "life_news"}
+                ],
+                [
+                    {"text": "💼 Вакансии", "callback_data": "life_jobs"},
+                    {"text": "🏛️ Клубы", "callback_data": "life_clubs"}
+                ],
+                [
+                    {"text": "🌐 Вся внеучебка", "web_app": {"url": "https://YOUR_USERNAME.github.io/max-university/events"}}
+                ],
+                [
+                    {"text": "« Назад в меню", "callback_data": "back_to_menu"}
+                ]
+            ]
+        }
+    }
+    
+    return keyboards.get(action, get_main_menu_keyboard("student"))
+
+# ============ ОБРАБОТЧИКИ КОМАНД ============
+
+async def handle_start_command(user_id: int, user_data: Dict):
+    """Обработка команды /start"""
+    
+    # Проверяем, есть ли уже роль у пользователя
+    if user_id in users_db and users_db[user_id].get("role"):
+        role = users_db[user_id]["role"]
+        text = f"С возвращением, {user_data.get('first_name', 'пользователь')}!\n\n" \
+               f"Ваша роль: {get_role_name(role)}\n\n" \
+               f"Выберите раздел или откройте приложение:"
+        
+        await bot_api.send_message(
+            user_id=user_id,
+            text=text,
+            reply_markup=get_main_menu_keyboard(role)
+        )
+    else:
+        # Первый запуск - выбор роли
+        text = f"👋 Привет, {user_data.get('first_name', 'пользователь')}!\n\n" \
+               f"Добро пожаловать в **Цифровой университет** на платформе MAX!\n\n" \
+               f"Для начала, выберите свою роль:"
+        
+        await bot_api.send_message(
+            user_id=user_id,
+            text=text,
+            reply_markup=get_role_selection_keyboard()
+        )
+
+async def handle_help_command(user_id: int):
+    """Обработка команды /help"""
+    text = """
+📚 **Доступные команды:**
+
+/start - Главное меню
+/help - Помощь
+/profile - Мой профиль
+/schedule - Расписание на сегодня
+/assignments - Мои задания
+/events - События
+/services - Электронные услуги
+
+**Быстрые команды:**
+/next - Следующее занятие
+/deadline - Ближайший дедлайн
+/card - Студенческий билет
+/news - Последние новости
+    """
+    
+    await bot_api.send_message(user_id=user_id, text=text)
+
+# ============ ОБРАБОТЧИКИ CALLBACK ============
+
+async def handle_role_selection(user_id: int, callback_query_id: str, role: str, message_id: int):
+    """Обработка выбора роли"""
+    
+    # Сохраняем роль
+    if user_id not in users_db:
+        users_db[user_id] = {}
+    
+    users_db[user_id]["role"] = role
+    users_db[user_id]["selected_at"] = datetime.now().isoformat()
+    
+    # Отвечаем на callback
+    await bot_api.answer_callback_query(
+        callback_query_id=callback_query_id,
+        text=f"Роль выбрана: {get_role_name(role)}"
+    )
+    
+    # Редактируем сообщение с главным меню
+    text = f"✅ Отлично! Вы выбрали роль: **{get_role_name(role)}**\n\n" \
+           f"Теперь выберите нужный раздел:"
+    
+    await bot_api.edit_message_text(
+        user_id=user_id,
+        message_id=message_id,
+        text=text,
+        reply_markup=get_main_menu_keyboard(role)
+    )
+
+async def handle_block_selection(user_id: int, callback_query_id: str, block: str, message_id: int):
+    """Обработка выбора блока"""
+    
+    block_names = {
+        "profile": "👤 Профиль",
+        "schedule": "📅 Расписание",
+        "lms": "📚 Учебные материалы",
+        "services": "📝 Электронные услуги",
+        "life": "🎉 Внеучебная жизнь",
+        "news": "📰 Новости",
+        "payment": "💳 Оплата",
+        "admission": "📄 Поступление",
+        "analytics": "📊 Аналитика",
+        "config": "⚙️ Настройки",
+        "users": "👥 Пользователи"
+    }
+    
+    # Отвечаем на callback
+    await bot_api.answer_callback_query(
+        callback_query_id=callback_query_id,
+        text=f"Открываю {block_names.get(block, block)}"
+    )
+    
+    # Показываем быстрые действия для блока
+    text = f"**{block_names.get(block, block)}**\n\n" \
+           f"Выберите действие или откройте полную версию в приложении:"
+    
+    await bot_api.edit_message_text(
+        user_id=user_id,
+        message_id=message_id,
+        text=text,
+        reply_markup=get_quick_actions_keyboard(block)
+    )
+
+async def handle_back_to_menu(user_id: int, callback_query_id: str, message_id: int):
+    """Возврат в главное меню"""
+    
+    role = users_db.get(user_id, {}).get("role", "student")
+    
+    await bot_api.answer_callback_query(
+        callback_query_id=callback_query_id,
+        text="Возвращаюсь в меню"
+    )
+    
+    text = "📱 Главное меню\n\nВыберите раздел:"
+    
+    await bot_api.edit_message_text(
+        user_id=user_id,
+        message_id=message_id,
+        text=text,
+        reply_markup=get_main_menu_keyboard(role)
+    )
+
+# ============ WEBHOOK ENDPOINT ============
+
+@app.post("/api/bot/webhook")
+async def bot_webhook(update: BotUpdate, background_tasks: BackgroundTasks):
+    """
+    Вебхук для получения обновлений от MAX Bot
+    """
+    
+    try:
+        # Обработка обычного сообщения
+        if update.message:
+            message = update.message
+            user_id = message.get("from", {}).get("id")
+            text = message.get("text", "")
+            user_data = message.get("from", {})
+            
+            # Обработка команд
+            if text.startswith("/start"):
+                await handle_start_command(user_id, user_data)
+            
+            elif text.startswith("/help"):
+                await handle_help_command(user_id)
+            
+            elif text.startswith("/schedule"):
+                role = users_db.get(user_id, {}).get("role", "student")
+                await bot_api.send_message(
+                    user_id=user_id,
+                    text="📅 Расписание",
+                    reply_markup=get_quick_actions_keyboard("schedule")
+                )
+            
+            elif text.startswith("/profile"):
+                await bot_api.send_message(
+                    user_id=user_id,
+                    text="👤 Профиль",
+                    reply_markup=get_quick_actions_keyboard("profile")
+                )
+        
+        # Обработка callback query (нажатия на inline кнопки)
+        elif update.callback_query:
+            callback = update.callback_query
+            callback_query_id = callback.get("id")
+            user_id = callback.get("from", {}).get("id")
+            callback_data = callback.get("data")
+            message_id = callback.get("message", {}).get("message_id")
+            
+            # Обработка выбора роли
+            if callback_data.startswith("role_"):
+                role = callback_data.split("_")[1]
+                await handle_role_selection(user_id, callback_query_id, role, message_id)
+            
+            # Обработка выбора блока
+            elif callback_data.startswith("block_"):
+                block = callback_data.split("_")[1]
+                await handle_block_selection(user_id, callback_query_id, block, message_id)
+            
+            # Возврат в меню
+            elif callback_data == "back_to_menu":
+                await handle_back_to_menu(user_id, callback_query_id, message_id)
+            
+            # Быстрые действия
+            elif callback_data.startswith("schedule_"):
+                action = callback_data.split("_")[1]
+                # Здесь логика для каждого действия
+                await bot_api.answer_callback_query(
+                    callback_query_id=callback_query_id,
+                    text=f"Действие: {action}"
+                )
+        
+        return {"status": "ok"}
+    
+    except Exception as e:
+        print(f"Error processing update: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ============
+
+def get_role_name(role: str) -> str:
+    """Получить красивое название роли"""
+    roles = {
+        "student": "Студент",
+        "applicant": "Абитуриент",
+        "employee": "Сотрудник",
+        "admin": "Администратор"
+    }
+    return roles.get(role, role)
+
+# ============ API ДЛЯ MINI-APP (как раньше) ============
+
+@app.get("/")
+async def root():
+    return {"message": "Digital University MAX Bot + Mini-App", "status": "running"}
+
+def get_user_id_from_headers(x_max_user_id: Optional[str] = Header(None)) -> int:
+    """
+    Извлекает ID пользователя из заголовков, которые устанавливает frontend
+    через интерцептор в MAX Bridge
+    """
+    if not x_max_user_id:
+        raise HTTPException(status_code=401, detail="User ID not provided")
+    
+    try:
+        return int(x_max_user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid user ID format")
+
+@app.get("/api/health")
+async def health_check():
+    return {"status": "healthy"}
+
+@app.post("/api/users/auth")
+async def authenticate_user(user: User, x_max_init_data: Optional[str] = Header(None)):
+    """
+    Аутентификация пользователя через MAX Bridge
+    Валидирует initData и создаёт/обновляет пользователя
+    """
+    # Проверяем подлинность данных (если init_data предоставлен)
+    if x_max_init_data:
+        try:
+            data = json.loads(x_max_init_data)
+            received_hash = data.get('hash')
+            
+            # Создаём список ключей для проверки (исключая сам hash)
+            data_check_string = "\n".join(
+                f"{k}={v}" for k, v in sorted(data.items()) 
+                if k != 'hash' and isinstance(v, (str, int, float, bool))
+            )
+            
+            # Вычисляем хеш
+            secret_key = hashlib.sha256(SECRET_KEY.encode()).digest()
+            calculated_hash = hmac.new(
+                secret_key,
+                data_check_string.encode(),
+                hashlib.sha256
+            ).hexdigest()
+            
+            if received_hash != calculated_hash:
+                raise HTTPException(status_code=401, detail="Invalid init data signature")
+        except Exception as e:
+            raise HTTPException(status_code=401, detail=f"Invalid init data: {str(e)}")
+    
+    # Проверяем наличие пользователя
+    if user.max_user_id in users_db:
+        existing_user = users_db[user.max_user_id]
+        return {
+            "user": existing_user,
+            "new_user": False,
+            "message": "User already exists"
+        }
+    
+    # Создаём нового пользователя
+    new_user = {
+        "id": len(users_db) + 1,
+        "max_user_id": user.max_user_id,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "username": user.username,
+        "photo_url": user.photo_url,
+        "language_code": user.language_code,
+        "role": user.role,
+        "university_id": user.university_id,
+        "created_at": datetime.now().isoformat()
+    }
+    
+    users_db[user.max_user_id] = new_user
+    
+    return {
+        "user": new_user,
+        "new_user": True,
+        "message": "User created successfully"
+    }
+
+@app.put("/api/users/role")
+async def update_user_role(
+    role: str, 
+    university_id: Optional[int] = None,
+    user_id: int = Depends(get_user_id_from_headers)
+):
+    """
+    Обновление роли пользователя
+    """
+    if user_id not in users_db:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    valid_roles = ["student", "applicant", "employee", "admin"]
+    if role not in valid_roles:
+        raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of {valid_roles}")
+    
+    users_db[user_id]["role"] = role
+    if university_id:
+        users_db[user_id]["university_id"] = university_id
+    
+    return {
+        "user": users_db[user_id],
+        "message": "Role updated successfully"
+    }
+
+@app.get("/api/universities/{university_id}")
+async def get_university(university_id: int):
+    """
+    Получение информации о университете
+    """
+    if university_id not in universities_db:
+        raise HTTPException(status_code=404, detail="University not found")
+    
+    return universities_db[university_id]
+
+@app.get("/api/universities/{university_id}/blocks")
+async def get_blocks_config(university_id: int, role: str):
+    """
+    Получение конфигурации блоков для роли
+    """
+    if university_id not in universities_db:
+        raise HTTPException(status_code=404, detail="University not found")
+    
+    university = universities_db[university_id]
+    valid_roles = ["student", "applicant", "employee", "admin"]
+    
+    if role not in valid_roles:
+        raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of {valid_roles}")
+    
+    blocks = university["blocks_config"].get(role, [])
+    
+    return {
+        "blocks": blocks,
+        "university_name": university.get("name", university.get("short_name", "")),
+        "role": role
+    }
+
+@app.get("/api/schedule")
+async def get_schedule(date: Optional[str] = None, user_id: int = Depends(get_user_id_from_headers)):
+    """
+    Получение расписания пользователя
+    """
+    # Моковые данные расписания
+    mock_schedule = [
+        {
+            "id": 1,
+            "time": "09:00-10:30",
+            "subject": "Математический анализ",
+            "room": "Аудитория 401",
+            "teacher": "Иванов И.И.",
+            "type": "Лекция"
+        },
+        {
+            "id": 2,
+            "time": "10:45-12:15",
+            "subject": "Программирование",
+            "room": "Компьютерный класс 305",
+            "teacher": "Петров П.П.",
+            "type": "Практика"
+        },
+        {
+            "id": 3,
+            "time": "13:00-14:30",
+            "subject": "Базы данных",
+            "room": "Аудитория 502",
+            "teacher": "Сидорова С.С.",
+            "type": "Семинар"
+        }
+    ]
+    
+    return {
+        "schedule": mock_schedule,
+        "date": date or datetime.now().strftime("%Y-%m-%d"),
+        "user_id": user_id
+    }
+
+@app.get("/api/courses")
+async def get_courses(user_id: int = Depends(get_user_id_from_headers)):
+    """
+    Получение списка курсов пользователя
+    """
+    mock_courses = [
+        {
+            "id": 1,
+            "name": "Математический анализ",
+            "progress": 65,
+            "assignments": 3,
+            "next_class": "2025-11-13 09:00"
+        },
+        {
+            "id": 2,
+            "name": "Программирование",
+            "progress": 78,
+            "assignments": 1,
+            "next_class": "2025-11-13 10:45"
+        }
+    ]
+    
+    return {"courses": mock_courses, "user_id": user_id}
+
+@app.get("/api/events")
+async def get_events():
+    """
+    Получение списка событий университета
+    """
+    mock_events = [
+        {
+            "id": 1,
+            "title": "Открытая лекция по AI",
+            "date": "2025-11-15",
+            "time": "18:00",
+            "location": "Аудитория 100",
+            "participants": 25
+        },
+        {
+            "id": 2,
+            "title": "Карьерный форум",
+            "date": "2025-11-20",
+            "time": "10:00",
+            "location": "Актовый зал",
+            "participants": 150
+        }
+    ]
+    
+    return {"events": mock_events}
+
+@app.post("/api/events/{event_id}/register")
+async def register_for_event(event_id: int, user_id: int = Depends(get_user_id_from_headers)):
+    """
+    Регистрация на событие
+    """
+    return {
+        "status": "registered",
+        "event_id": event_id,
+        "user_id": user_id,
+        "message": "Successfully registered for event"
+    }
+
+@app.get("/api/news")
+async def get_news():
+    """
+    Получение новостей университета
+    """
+    mock_news = [
+        {
+            "id": 1,
+            "title": "Запуск нового кампуса",
+            "content": "Открыт новый корпус с современными лабораториями",
+            "date": "2025-11-10",
+            "category": "announcement"
+        },
+        {
+            "id": 2,
+            "title": "Студент выиграл престижный конкурс",
+            "content": "Поздравляем нашего студента с первым местом",
+            "date": "2025-11-09",
+            "category": "achievement"
+        }
+    ]
+    
+    return {"news": mock_news}
+
+@app.get("/api/statistics")
+async def get_statistics(user_id: int = Depends(get_user_id_from_headers)):
+    """
+    Получение статистики университета (только для администраторов)
+    """
+    if user_id not in users_db or users_db[user_id].get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Access denied. Admin role required")
+    
+    return {
+        "total_users": len(users_db),
+        "active_students": 1542,
+        "faculty_members": 287,
+        "events_this_month": 12,
+        "average_gpa": 3.8
+    }
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
