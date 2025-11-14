@@ -8,7 +8,7 @@ import {
   Card,
   Text
 } from '@vkontakte/vkui';
-import { Icon28ChartOutline } from '@vkontakte/icons';
+import { Icon28PollSquareOutline } from '@vkontakte/icons';
 import { useMAXBridge } from './useMAXBridge';
 import apiService from './api-service';
 
@@ -47,7 +47,7 @@ const AdminPage = () => {
     <Panel id="admin">
       <PanelHeader>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Icon28ChartOutline />
+          <Icon28PollSquareOutline />
           Панель администратора
         </div>
       </PanelHeader>

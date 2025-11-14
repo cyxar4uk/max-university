@@ -20,7 +20,7 @@ import {
   Icon28NewsfeedOutline,
   Icon28MoneyCircleOutline,
   Icon28Users3Outline,
-  Icon28ChartOutline,
+  Icon28PollSquareOutline,
   Icon28SettingsOutline,
   Icon28WorkOutline
 } from '@vkontakte/icons';
@@ -86,7 +86,7 @@ const HomePage = () => {
     payment: <Icon28MoneyCircleOutline />,
     news: <Icon28NewsfeedOutline />,
     admission: <Icon28Users3Outline />,
-    analytics: <Icon28ChartOutline />,
+    analytics: <Icon28PollSquareOutline />,
     config: <Icon28SettingsOutline />,
     users: <Icon28Users3Outline />,
     all_blocks: <Icon28SettingsOutline />
