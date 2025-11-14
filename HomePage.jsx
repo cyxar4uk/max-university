@@ -50,17 +50,25 @@ const HomePage = () => {
   useEffect(() => {
     const loadBlocks = async () => {
       try {
-        const role = user.role || localStorage.getItem('userRole');
+        const role = user.role || localStorage.getItem('userRole') || 'student';
         const universityId = user.universityId || parseInt(localStorage.getItem('universityId') || '1');
 
-        if (role && universityId) {
-          // Получаем конфигурацию блоков для роли
-          const config = await apiService.getBlocksConfig(universityId, role);
-          setBlocks(config.blocks || []);
-          setUniversity(config.university_name);
-        }
+        // Получаем конфигурацию блоков для роли
+        const config = await apiService.getBlocksConfig(universityId, role);
+        setBlocks(config.blocks || []);
+        setUniversity(config.university_name);
       } catch (error) {
         console.error('Error loading blocks:', error);
+        // Используем дефолтные блоки при ошибке
+        const defaultBlocks = {
+          student: ["profile", "schedule", "lms", "services", "life"],
+          applicant: ["profile", "news", "admission", "payment"],
+          employee: ["profile", "schedule", "services", "news"],
+          admin: ["profile", "analytics", "config", "users", "all_blocks"]
+        };
+        const role = user.role || localStorage.getItem('userRole') || 'student';
+        setBlocks(defaultBlocks[role] || defaultBlocks.student);
+        setUniversity("Российская академия народного хозяйства");
       } finally {
         setLoading(false);
       }

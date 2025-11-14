@@ -7,6 +7,28 @@
     <title>Цифровой университет MAX</title>
     <!-- MAX Bridge SDK -->
     <script src="https://bridge.max.ru/web-app-bridge.js"></script>
+    <script>
+      // Мок для window.WebApp если MAX Bridge недоступен
+      if (typeof window.WebApp === 'undefined') {
+        window.WebApp = {
+          ready: function() { console.log('WebApp.ready() called (mock)'); },
+          initData: '',
+          initDataUnsafe: {
+            user: null,
+            start_param: null
+          },
+          platform: 'web',
+          version: '1.0',
+          BackButton: {
+            show: function() { console.log('BackButton.show() called (mock)'); },
+            hide: function() { console.log('BackButton.hide() called (mock)'); },
+            onClick: function(callback) { console.log('BackButton.onClick() called (mock)'); },
+            offClick: function() { console.log('BackButton.offClick() called (mock)'); }
+          }
+        };
+        console.warn('MAX Bridge not available, using mock implementation');
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

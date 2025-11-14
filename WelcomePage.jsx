@@ -53,17 +53,39 @@ const WelcomePage = () => {
             : 1;
         }
 
-        // 2. Если роли нет - показываем сообщение
+        // 2. Если роли нет - используем дефолтную роль для демонстрации
         if (!role || !['student', 'applicant', 'employee', 'admin'].includes(role)) {
-          setError('Пожалуйста, выберите роль через чат-бота');
-          setLoading(false);
-          return;
+          // Для демонстрации используем роль student по умолчанию
+          role = 'student';
+          universityId = 1;
         }
 
-        // 3. Если нет данных пользователя от MAX - ошибка
+        // 3. Если нет данных пользователя от MAX - используем мок-данные для демонстрации
         if (!userInfo) {
-          setError('Не удалось получить данные пользователя от MAX');
+          console.warn('No user data from MAX Bridge, using mock data');
+          // Создаём мок-данные пользователя для демонстрации
+          const mockUserInfo = {
+            id: 12345,
+            first_name: 'Демо',
+            last_name: 'Пользователь',
+            username: 'demo_user',
+            photo_url: null,
+            language_code: 'ru'
+          };
+          
+          // Используем мок-данные вместо реальных
+          dispatch(setUserFromMAX({
+            user: mockUserInfo,
+            role: role,
+            universityId: universityId
+          }));
+          
+          localStorage.setItem('userRole', role);
+          localStorage.setItem('universityId', String(universityId));
+          localStorage.setItem('maxUserId', String(mockUserInfo.id));
+          
           setLoading(false);
+          navigate('/home', { replace: true });
           return;
         }
 

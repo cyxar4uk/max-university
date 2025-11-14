@@ -24,7 +24,7 @@ app.add_middleware(
 SECRET_KEY = "your-secret-key-change-in-production"
 
 # MAX Bot API Token (один и тот же для бота и mini-app)
-MAX_BOT_TOKEN = "your-max-bot-token-here"
+MAX_BOT_TOKEN = "f9LHodD0cOI5MJfQ6eqCiVzCVUt8Va__S2Nzwvj06nK6_VfYt4Ra9Sp04TSWBpi5vi_XOuNQ9MNBrHU6hsIu"
 MAX_API_BASE = "https://api.max.ru/bot"
 
 # ============ МОДЕЛИ ДАННЫХ ============
@@ -190,7 +190,7 @@ def get_main_menu_keyboard(role: str) -> Dict:
                     {"text": "💳 Оплата", "callback_data": "block_payment"}
                 ],
                 [
-                    {"text": "🌐 Открыть приложение", "web_app": {"url": "https://YOUR_USERNAME.github.io/max-university/?role=student"}}
+                    {"text": "🌐 Открыть приложение", "web_app": {"url": "https://cyxar4uk.github.io/max-university/?role=student"}}
                 ]
             ]
         },
@@ -205,7 +205,7 @@ def get_main_menu_keyboard(role: str) -> Dict:
                     {"text": "💳 Оплата", "callback_data": "block_payment"}
                 ],
                 [
-                    {"text": "🌐 Открыть приложение", "web_app": {"url": "https://YOUR_USERNAME.github.io/max-university/?role=applicant"}}
+                    {"text": "🌐 Открыть приложение", "web_app": {"url": "https://cyxar4uk.github.io/max-university/?role=applicant"}}
                 ]
             ]
         },
@@ -220,7 +220,7 @@ def get_main_menu_keyboard(role: str) -> Dict:
                     {"text": "📰 Новости", "callback_data": "block_news"}
                 ],
                 [
-                    {"text": "🌐 Открыть приложение", "web_app": {"url": "https://YOUR_USERNAME.github.io/max-university/?role=employee"}}
+                    {"text": "🌐 Открыть приложение", "web_app": {"url": "https://cyxar4uk.github.io/max-university/?role=employee"}}
                 ]
             ]
         },
@@ -235,7 +235,7 @@ def get_main_menu_keyboard(role: str) -> Dict:
                     {"text": "📰 Новости", "callback_data": "block_news"}
                 ],
                 [
-                    {"text": "🌐 Панель администратора", "web_app": {"url": "https://YOUR_USERNAME.github.io/max-university/?role=admin"}}
+                    {"text": "🌐 Панель администратора", "web_app": {"url": "https://cyxar4uk.github.io/max-university/?role=admin"}}
                 ]
             ]
         }
@@ -258,7 +258,7 @@ def get_quick_actions_keyboard(action: str) -> Dict:
                     {"text": "🔄 Изменения", "callback_data": "schedule_changes"}
                 ],
                 [
-                    {"text": "🌐 Открыть полное расписание", "web_app": {"url": "https://YOUR_USERNAME.github.io/max-university/schedule"}}
+                    {"text": "🌐 Открыть полное расписание", "web_app": {"url": "https://cyxar4uk.github.io/max-university/schedule"}}
                 ],
                 [
                     {"text": "« Назад в меню", "callback_data": "back_to_menu"}
@@ -276,7 +276,7 @@ def get_quick_actions_keyboard(action: str) -> Dict:
                     {"text": "📖 Библиотека", "callback_data": "lms_library"}
                 ],
                 [
-                    {"text": "🌐 Открыть LMS", "web_app": {"url": "https://YOUR_USERNAME.github.io/max-university/courses"}}
+                    {"text": "🌐 Открыть LMS", "web_app": {"url": "https://cyxar4uk.github.io/max-university/courses"}}
                 ],
                 [
                     {"text": "« Назад в меню", "callback_data": "back_to_menu"}
@@ -293,7 +293,7 @@ def get_quick_actions_keyboard(action: str) -> Dict:
                     {"text": "⚙️ Настройки", "callback_data": "profile_settings"}
                 ],
                 [
-                    {"text": "🌐 Открыть профиль", "web_app": {"url": "https://YOUR_USERNAME.github.io/max-university/profile"}}
+                    {"text": "🌐 Открыть профиль", "web_app": {"url": "https://cyxar4uk.github.io/max-university/profile"}}
                 ],
                 [
                     {"text": "« Назад в меню", "callback_data": "back_to_menu"}
@@ -311,7 +311,7 @@ def get_quick_actions_keyboard(action: str) -> Dict:
                     {"text": "🎫 Пропуск", "callback_data": "services_pass"}
                 ],
                 [
-                    {"text": "🌐 Все услуги", "web_app": {"url": "https://YOUR_USERNAME.github.io/max-university/services"}}
+                    {"text": "🌐 Все услуги", "web_app": {"url": "https://cyxar4uk.github.io/max-university/services"}}
                 ],
                 [
                     {"text": "« Назад в меню", "callback_data": "back_to_menu"}
@@ -329,7 +329,7 @@ def get_quick_actions_keyboard(action: str) -> Dict:
                     {"text": "🏛️ Клубы", "callback_data": "life_clubs"}
                 ],
                 [
-                    {"text": "🌐 Вся внеучебка", "web_app": {"url": "https://YOUR_USERNAME.github.io/max-university/events"}}
+                    {"text": "🌐 Вся внеучебка", "web_app": {"url": "https://cyxar4uk.github.io/max-university/events"}}
                 ],
                 [
                     {"text": "« Назад в меню", "callback_data": "back_to_menu"}
@@ -703,12 +703,18 @@ async def get_blocks_config(university_id: int, role: str):
     }
 
 @app.get("/api/schedule")
-async def get_schedule(date: Optional[str] = None, user_id: int = Depends(get_user_id_from_headers)):
+async def get_schedule(date: Optional[str] = None, user_id: Optional[int] = None):
     """
     Получение расписания пользователя
+    Моковые данные для разных ролей
     """
-    # Моковые данные расписания
-    mock_schedule = [
+    # Получаем роль пользователя если есть
+    role = None
+    if user_id and user_id in users_db:
+        role = users_db[user_id].get("role")
+    
+    # Моковые данные расписания для студентов
+    mock_schedule_student = [
         {
             "id": 1,
             "time": "09:00-10:30",
@@ -735,6 +741,32 @@ async def get_schedule(date: Optional[str] = None, user_id: int = Depends(get_us
         }
     ]
     
+    # Моковые данные для сотрудников
+    mock_schedule_employee = [
+        {
+            "id": 1,
+            "time": "10:00-11:30",
+            "subject": "Заседание кафедры",
+            "room": "Кабинет 201",
+            "teacher": "Зав. кафедрой",
+            "type": "Совещание"
+        },
+        {
+            "id": 2,
+            "time": "14:00-15:30",
+            "subject": "Консультации студентов",
+            "room": "Кабинет 205",
+            "teacher": "Ваш кабинет",
+            "type": "Консультация"
+        }
+    ]
+    
+    # Выбираем расписание в зависимости от роли
+    if role == "employee":
+        mock_schedule = mock_schedule_employee
+    else:
+        mock_schedule = mock_schedule_student
+    
     return {
         "schedule": mock_schedule,
         "date": date or datetime.now().strftime("%Y-%m-%d"),
@@ -742,10 +774,12 @@ async def get_schedule(date: Optional[str] = None, user_id: int = Depends(get_us
     }
 
 @app.get("/api/courses")
-async def get_courses(user_id: int = Depends(get_user_id_from_headers)):
+async def get_courses(user_id: Optional[int] = None):
     """
     Получение списка курсов пользователя
+    Моковые данные для разных пользователей
     """
+    # Моковые данные курсов
     mock_courses = [
         {
             "id": 1,
@@ -760,6 +794,20 @@ async def get_courses(user_id: int = Depends(get_user_id_from_headers)):
             "progress": 78,
             "assignments": 1,
             "next_class": "2025-11-13 10:45"
+        },
+        {
+            "id": 3,
+            "name": "Базы данных",
+            "progress": 45,
+            "assignments": 5,
+            "next_class": "2025-11-13 13:00"
+        },
+        {
+            "id": 4,
+            "name": "Веб-разработка",
+            "progress": 90,
+            "assignments": 0,
+            "next_class": "2025-11-14 10:00"
         }
     ]
     
@@ -792,14 +840,14 @@ async def get_events():
     return {"events": mock_events}
 
 @app.post("/api/events/{event_id}/register")
-async def register_for_event(event_id: int, user_id: int = Depends(get_user_id_from_headers)):
+async def register_for_event(event_id: int, user_id: Optional[int] = None):
     """
     Регистрация на событие
     """
     return {
         "status": "registered",
         "event_id": event_id,
-        "user_id": user_id,
+        "user_id": user_id or 12345,
         "message": "Successfully registered for event"
     }
 
@@ -828,15 +876,17 @@ async def get_news():
     return {"news": mock_news}
 
 @app.get("/api/statistics")
-async def get_statistics(user_id: int = Depends(get_user_id_from_headers)):
+async def get_statistics(user_id: Optional[int] = None):
     """
     Получение статистики университета (только для администраторов)
     """
-    if user_id not in users_db or users_db[user_id].get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Access denied. Admin role required")
+    # Для демонстрации разрешаем доступ без проверки
+    # В продакшене раскомментируйте проверку:
+    # if user_id and (user_id not in users_db or users_db[user_id].get("role") != "admin"):
+    #     raise HTTPException(status_code=403, detail="Access denied. Admin role required")
     
     return {
-        "total_users": len(users_db),
+        "total_users": len(users_db) or 1250,
         "active_students": 1542,
         "faculty_members": 287,
         "events_this_month": 12,
