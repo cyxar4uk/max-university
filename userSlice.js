@@ -9,6 +9,7 @@ const initialState = {
   languageCode: null,
   role: null,
   universityId: null,
+  canChangeRole: true,  // По умолчанию можно менять роль
   isAuthenticated: false,
   loading: false,
   error: null,
@@ -20,7 +21,7 @@ const userSlice = createSlice({
   reducers: {
     // Установка информации пользователя из MAX Bridge
     setUserFromMAX: (state, action) => {
-      const { user, role, universityId } = action.payload;
+      const { user, role, universityId, canChangeRole } = action.payload;
       state.maxUserId = user.id;
       state.firstName = user.first_name;
       state.lastName = user.last_name;
@@ -29,6 +30,7 @@ const userSlice = createSlice({
       state.languageCode = user.language_code;
       state.role = role;
       state.universityId = universityId;
+      state.canChangeRole = canChangeRole !== undefined ? canChangeRole : true;
       state.isAuthenticated = true;
       state.error = null;
     },

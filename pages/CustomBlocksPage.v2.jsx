@@ -208,7 +208,7 @@ const CustomBlocksPage = () => {
                 fontSize: '12px',
                 resize: 'vertical'
               }}
-              placeholder="import React from 'react';\n\nconst CustomWidget = ({ config }) => {\n  return (\n    <div className=\"widget\">\n      {/* Ваш код */}\n    </div>\n  );\n};\n\nexport default CustomWidget;"
+              placeholder={'import React from \'react\';\n\nconst CustomWidget = ({ config }) => {\n  return (\n    <div className="widget">\n      {/* Ваш код */}\n    </div>\n  );\n};\n\nexport default CustomWidget;'}
             />
           </div>
 

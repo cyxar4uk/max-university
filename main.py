@@ -1089,6 +1089,167 @@ async def get_approved_blocks_endpoint(university_id: Optional[int] = None):
     blocks = database.get_approved_custom_blocks(university_id)
     return {"blocks": blocks}
 
+# ============ КОДЫ ПРИГЛАШЕНИЯ ============
+
+class InvitationCodeUse(BaseModel):
+    code: str
+
+@app.post("/api/invitation/use")
+async def use_invitation_code_endpoint(data: InvitationCodeUse, user_id: int = Header(None, alias="X-MAX-User-ID")):
+    """Использовать код приглашения"""
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User ID required")
+    
+    result = database.use_invitation_code(data.code, user_id)
+    if not result:
+        raise HTTPException(status_code=400, detail="Invalid or expired invitation code")
+    
+    # Обновляем пользователя
+    user = database.get_user(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    database.update_user_with_invitation_code(
+        user_id,
+        result["code_id"],
+        result["role"],
+        result["university_id"]
+    )
+    
+    return {
+        "success": True,
+        "university_id": result["university_id"],
+        "role": result["role"],
+        "message": "Invitation code used successfully"
+    }
+
+class InvitationCodeGenerate(BaseModel):
+    university_id: int
+    role: str
+    count: int = 1
+
+@app.post("/api/admin/invitation-codes/generate")
+async def generate_invitation_codes_endpoint(
+    data: InvitationCodeGenerate,
+    user_id: int = Header(None, alias="X-MAX-User-ID")
+):
+    """Сгенерировать коды приглашения"""
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User ID required")
+    
+    user = database.get_user(user_id)
+    if not user or user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only university admins can generate codes")
+    
+    codes = database.generate_invitation_codes_batch(
+        data.university_id,
+        data.role,
+        user_id,
+        data.count
+    )
+    
+    return {"success": True, "codes": codes, "count": len(codes)}
+
+@app.get("/api/admin/invitation-codes")
+async def get_invitation_codes_endpoint(
+    university_id: int,
+    used: Optional[bool] = None,
+    user_id: int = Header(None, alias="X-MAX-User-ID")
+):
+    """Получить коды приглашения"""
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User ID required")
+    
+    user = database.get_user(user_id)
+    if not user or user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only university admins can view codes")
+    
+    codes = database.get_invitation_codes_by_university(university_id, used)
+    return {"codes": codes}
+
+class StudentsImport(BaseModel):
+    university_id: int
+    students: List[Dict]  # Список студентов с полями: name, id, role (опционально)
+
+@app.post("/api/admin/invitation-codes/import-students")
+async def import_students_endpoint(
+    data: StudentsImport,
+    user_id: int = Header(None, alias="X-MAX-User-ID")
+):
+    """Импортировать студентов и сгенерировать коды"""
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User ID required")
+    
+    user = database.get_user(user_id)
+    if not user or user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only university admins can import students")
+    
+    results = database.import_students_and_generate_codes(
+        data.university_id,
+        user_id,
+        data.students
+    )
+    
+    return {"success": True, "results": results, "count": len(results)}
+
+# ============ ПАНЕЛЬ СУПЕРАДМИНА ============
+
+@app.get("/api/superadmin/universities")
+async def get_all_universities_endpoint(user_id: int = Header(None, alias="X-MAX-User-ID")):
+    """Получить все университеты (только для суперадминов)"""
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User ID required")
+    
+    if not database.is_superadmin(user_id):
+        raise HTTPException(status_code=403, detail="Only superadmins can access this")
+    
+    universities = database.get_all_universities()
+    return {"universities": universities}
+
+class UniversityCreate(BaseModel):
+    name: str
+    short_name: str
+    description: str
+    admin_user_id: int  # ID пользователя, который станет админом
+
+@app.post("/api/superadmin/universities")
+async def create_university_endpoint(
+    data: UniversityCreate,
+    user_id: int = Header(None, alias="X-MAX-User-ID")
+):
+    """Создать новый университет (только для суперадминов)"""
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User ID required")
+    
+    if not database.is_superadmin(user_id):
+        raise HTTPException(status_code=403, detail="Only superadmins can create universities")
+    
+    university_id = database.create_university(
+        data.name,
+        data.short_name,
+        data.description,
+        user_id,
+        data.admin_user_id
+    )
+    
+    return {"success": True, "university_id": university_id}
+
+@app.post("/api/superadmin/universities/{university_id}/admin")
+async def set_university_admin_endpoint(
+    university_id: int,
+    admin_user_id: int,
+    user_id: int = Header(None, alias="X-MAX-User-ID")
+):
+    """Назначить администратора университета (только для суперадминов)"""
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User ID required")
+    
+    if not database.is_superadmin(user_id):
+        raise HTTPException(status_code=403, detail="Only superadmins can set university admins")
+    
+    database.set_university_admin(university_id, admin_user_id)
+    return {"success": True, "message": "University admin set"}
+
 @app.get("/api/admin/custom-blocks/standards")
 async def get_development_standards():
     """Получить стандарты разработки для кастомных блоков"""

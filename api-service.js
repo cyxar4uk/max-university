@@ -653,6 +653,103 @@ class UniversityAPIService {
       };
     }
   }
+
+  // Коды приглашения
+  async useInvitationCode(code) {
+    try {
+      const response = await this.client.post('/invitation/use', { code });
+      return response.data;
+    } catch (error) {
+      console.error('Use invitation code error:', error);
+      // Мок для тестирования
+      if (code === 'TEST-CODE-123') {
+        return {
+          university_id: 1,
+          role: 'student',
+          message: "Invitation code used successfully (mock)"
+        };
+      }
+      throw error;
+    }
+  }
+
+  async generateInvitationCodes(universityId, role, count = 1) {
+    try {
+      const response = await this.client.post('/admin/invitation-codes/generate', {
+        university_id: universityId,
+        role,
+        count
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Generate invitation codes error:', error);
+      throw error;
+    }
+  }
+
+  async getInvitationCodes(universityId, used = null) {
+    try {
+      const response = await this.client.get('/admin/invitation-codes', {
+        params: {
+          university_id: universityId,
+          ...(used !== null && { used })
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Get invitation codes error:', error);
+      throw error;
+    }
+  }
+
+  async importStudents(universityId, students) {
+    try {
+      const response = await this.client.post('/admin/invitation-codes/import-students', {
+        university_id: universityId,
+        students
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Import students error:', error);
+      throw error;
+    }
+  }
+
+  // Суперадмин API
+  async getAllUniversities() {
+    try {
+      const response = await this.client.get('/superadmin/universities');
+      return response.data;
+    } catch (error) {
+      console.error('Get all universities error:', error);
+      throw error;
+    }
+  }
+
+  async createUniversity(name, shortName, description, adminUserId) {
+    try {
+      const response = await this.client.post('/superadmin/universities', {
+        name,
+        short_name: shortName,
+        description,
+        admin_user_id: adminUserId
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Create university error:', error);
+      throw error;
+    }
+  }
+
+  async setUniversityAdmin(universityId, adminUserId) {
+    try {
+      const response = await this.client.post(`/superadmin/universities/${universityId}/admin?admin_user_id=${adminUserId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Set university admin error:', error);
+      throw error;
+    }
+  }
 }
 
 export default new UniversityAPIService();

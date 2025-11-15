@@ -41,8 +41,19 @@ def init_users_db():
             language_code TEXT,
             role TEXT,
             university_id INTEGER DEFAULT 1,
+            invitation_code_id INTEGER,  -- ID кода приглашения, если использован
+            can_change_role BOOLEAN DEFAULT 1,  -- Может ли менять роль (0 для пользователей с кодом)
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # Таблица суперадминов приложения
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS superadmins (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            max_user_id INTEGER UNIQUE NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
     
@@ -61,7 +72,26 @@ def init_universities_db():
             name TEXT NOT NULL,
             short_name TEXT,
             description TEXT,
+            admin_user_id INTEGER,  -- ID администратора университета
+            created_by_superadmin_id INTEGER,  -- ID суперадмина, создавшего университет
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # Таблица кодов приглашения
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS invitation_codes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT UNIQUE NOT NULL,
+            university_id INTEGER NOT NULL,
+            role TEXT NOT NULL,
+            generated_by_user_id INTEGER,  -- ID админа, сгенерировавшего код
+            used_by_user_id INTEGER,  -- ID пользователя, использовавшего код
+            used_at TIMESTAMP,
+            expires_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (university_id) REFERENCES universities(id),
+            FOREIGN KEY (generated_by_user_id) REFERENCES users(id)
         )
     """)
     
@@ -237,8 +267,8 @@ def create_user(user_data: Dict) -> Dict:
     cursor = conn.cursor()
     
     cursor.execute("""
-        INSERT INTO users (max_user_id, first_name, last_name, username, photo_url, language_code, role, university_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO users (max_user_id, first_name, last_name, username, photo_url, language_code, role, university_id, invitation_code_id, can_change_role)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         user_data["max_user_id"],
         user_data["first_name"],
@@ -247,7 +277,9 @@ def create_user(user_data: Dict) -> Dict:
         user_data.get("photo_url"),
         user_data.get("language_code"),
         user_data.get("role"),
-        user_data.get("university_id", 1)
+        user_data.get("university_id", 1),
+        user_data.get("invitation_code_id"),
+        user_data.get("can_change_role", 1)
     ))
     
     user_id = cursor.lastrowid
@@ -255,6 +287,21 @@ def create_user(user_data: Dict) -> Dict:
     conn.close()
     
     return get_user(user_data["max_user_id"])
+
+
+def update_user_with_invitation_code(max_user_id: int, invitation_code_id: int, role: str, university_id: int):
+    """Обновить пользователя после использования кода приглашения"""
+    conn = sqlite3.connect(USERS_DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        UPDATE users 
+        SET role = ?, university_id = ?, invitation_code_id = ?, can_change_role = 0, updated_at = CURRENT_TIMESTAMP
+        WHERE max_user_id = ?
+    """, (role, university_id, invitation_code_id, max_user_id))
+    
+    conn.commit()
+    conn.close()
 
 
 def update_user_role(max_user_id: int, role: str, university_id: int = 1):

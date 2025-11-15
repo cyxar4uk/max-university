@@ -66,6 +66,14 @@ const AdminPage = () => {
       </div>
 
       <div style={{ marginBottom: '24px' }}>
+        <h2 style={{ marginBottom: '16px', fontSize: '18px' }}>Коды приглашения</h2>
+        <div className="card card-clickable" onClick={() => navigate('/admin/invitation-codes')}>
+          <h3 className="card-title">🎫 Управление кодами</h3>
+          <p className="card-text">Генерация и импорт кодов приглашения</p>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '24px' }}>
         <h2 style={{ marginBottom: '16px', fontSize: '18px' }}>Кастомные блоки</h2>
         <div className="card card-clickable" onClick={() => navigate('/admin/custom-blocks')}>
           <h3 className="card-title">📦 Создать кастомный блок</h3>

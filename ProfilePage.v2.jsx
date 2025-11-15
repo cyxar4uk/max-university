@@ -69,13 +69,24 @@ const ProfilePage = () => {
         <p className="card-text">Российская академия народного хозяйства</p>
       </div>
 
-      <div className="card" style={{ marginTop: '16px' }}>
-        <h3 className="card-title" style={{ marginBottom: '12px' }}>Тестирование</h3>
-        <p className="card-text" style={{ marginBottom: '12px' }}>
-          Переключитесь между тестовыми пользователями для проверки разных ролей
-        </p>
-        <UserSwitcher />
-      </div>
+      {/* Показываем переключатель только если пользователь может менять роль */}
+      {user.canChangeRole !== false && (
+        <div className="card" style={{ marginTop: '16px' }}>
+          <h3 className="card-title" style={{ marginBottom: '12px' }}>Тестирование</h3>
+          <p className="card-text" style={{ marginBottom: '12px' }}>
+            Переключитесь между тестовыми пользователями для проверки разных ролей
+          </p>
+          <UserSwitcher />
+        </div>
+      )}
+
+      {user.canChangeRole === false && (
+        <div className="card" style={{ marginTop: '16px', background: 'var(--max-bg-secondary)' }}>
+          <p className="card-text" style={{ fontSize: '14px', color: 'var(--max-text-secondary)' }}>
+            ⚠️ Вы вошли по коду приглашения. Смена роли недоступна.
+          </p>
+        </div>
+      )}
     </div>
   );
 };

@@ -14,6 +14,83 @@
   --max-radius: 12px;
 }
 
+/* Welcome Page */
+.welcome-container {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.welcome-title {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--max-primary);
+}
+
+.welcome-subtitle {
+  font-size: 16px;
+  color: var(--max-text-secondary);
+  margin-bottom: 32px;
+  line-height: 1.5;
+}
+
+.invitation-form {
+  margin-bottom: 24px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid var(--max-border);
+  border-radius: var(--max-radius);
+  font-size: 16px;
+  text-align: center;
+  letter-spacing: 2px;
+  font-weight: 600;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--max-primary);
+}
+
+.form-input.error {
+  border-color: var(--max-danger);
+}
+
+.form-error {
+  margin-top: 8px;
+  color: var(--max-danger);
+  font-size: 14px;
+}
+
+.test-code-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--max-border);
+}
+
+.test-code-label {
+  font-size: 14px;
+  color: var(--max-text-secondary);
+  margin-bottom: 8px;
+}
+
 /* App Container */
 .app-container {
   min-height: 100vh;
