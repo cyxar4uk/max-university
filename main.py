@@ -983,6 +983,25 @@ async def add_section_endpoint(data: SectionAdd):
     section_id = database.add_section(data.university_id, data.role, data.name, data.header_color)
     return {"success": True, "section_id": section_id}
 
+@app.post("/api/admin/sections/reorder")
+async def reorder_sections_endpoint(data: BlockReorder):
+    """Изменить порядок разделов (drag & drop)"""
+    # Обновляем order_index для разделов
+    import sqlite3
+    conn = sqlite3.connect(database.CONFIG_DB_PATH)
+    cursor = conn.cursor()
+    
+    for index, section_id in enumerate(data.block_ids):
+        cursor.execute("""
+            UPDATE sections 
+            SET order_index = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (index, section_id))
+    
+    conn.commit()
+    conn.close()
+    return {"success": True, "message": "Sections reordered"}
+
 @app.delete("/api/admin/sections/{section_id}")
 async def delete_section_endpoint(section_id: int):
     """Удалить раздел"""

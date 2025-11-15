@@ -488,6 +488,16 @@ class UniversityAPIService {
       throw error;
     }
   }
+
+  async reorderSections(sectionIds) {
+    try {
+      const response = await this.client.post('/admin/sections/reorder', { block_ids: sectionIds });
+      return response.data;
+    } catch (error) {
+      console.error('Reorder sections error:', error);
+      throw error;
+    }
+  }
 }
 
 export default new UniversityAPIService();
