@@ -39,6 +39,7 @@ jobs:
         env:
           NODE_ENV: production
           VITE_BASE: /max-university/
+          VITE_API_URL: https://your-backend-url.com/api
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -51,4 +52,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-

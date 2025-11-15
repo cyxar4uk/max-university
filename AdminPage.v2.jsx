@@ -3,6 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import apiService from './api-service';
 import UserSwitcher from './UserSwitcher';
 
+const roles = ['student', 'applicant', 'employee', 'admin'];
+const roleNames = {
+  student: 'Студент',
+  applicant: 'Абитуриент',
+  employee: 'Сотрудник',
+  admin: 'Администратор'
+};
+
 const AdminPage = () => {
   const navigate = useNavigate();
   const [statistics, setStatistics] = useState(null);
@@ -40,6 +48,22 @@ const AdminPage = () => {
           ←
         </button>
         <h1 className="page-title">📊 Панель администратора</h1>
+      </div>
+
+      <div style={{ marginBottom: '24px' }}>
+        <h2 style={{ marginBottom: '16px', fontSize: '18px' }}>Настройка интерфейса</h2>
+        <div className="grid">
+          {roles.map((role) => (
+            <div
+              key={role}
+              className="card card-clickable"
+              onClick={() => navigate(`/admin/config/${role}`)}
+            >
+              <h3 className="card-title">{roleNames[role]}</h3>
+              <p className="card-text">Настроить разделы и блоки</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       <h2 style={{ marginBottom: '16px', fontSize: '18px' }}>Статистика университета</h2>

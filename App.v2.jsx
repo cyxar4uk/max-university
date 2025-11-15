@@ -11,6 +11,7 @@ import ProfilePage from './ProfilePage.v2';
 import SchedulePage from './SchedulePage.v2';
 import CoursesPage from './CoursesPage.v2';
 import AdminPage from './AdminPage.v2';
+import AdminConfigPage from './AdminConfigPage.v2';
 import ServicesPage from './ServicesPage.v2';
 import EventsPage from './EventsPage.v2';
 import NewsPage from './NewsPage.v2';
@@ -40,6 +41,7 @@ function App() {
           <Route path="/schedule" element={<SchedulePage />} />
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/config/:role" element={<AdminConfigPage />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/news" element={<NewsPage />} />

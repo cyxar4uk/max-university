@@ -369,6 +369,125 @@ class UniversityAPIService {
       throw error;
     }
   }
+
+  // Админ-панель API
+  async getAdminConfig(universityId, role) {
+    try {
+      const response = await this.client.get(`/admin/config/${universityId}/${role}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get admin config error:', error);
+      throw error;
+    }
+  }
+
+  async updateSectionName(sectionId, name) {
+    try {
+      const response = await this.client.put(`/admin/sections/${sectionId}/name`, { name });
+      return response.data;
+    } catch (error) {
+      console.error('Update section name error:', error);
+      throw error;
+    }
+  }
+
+  async updateHeaderColor(universityId, role, color) {
+    try {
+      const response = await this.client.put(
+        `/admin/config/${universityId}/${role}/header-color`,
+        { color }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Update header color error:', error);
+      throw error;
+    }
+  }
+
+  async reorderBlocks(blockIds) {
+    try {
+      const response = await this.client.post('/admin/blocks/reorder', { block_ids: blockIds });
+      return response.data;
+    } catch (error) {
+      console.error('Reorder blocks error:', error);
+      throw error;
+    }
+  }
+
+  async addBlock(sectionId, blockType, name, orderIndex = null) {
+    try {
+      const response = await this.client.post(
+        `/admin/sections/${sectionId}/blocks`,
+        { block_type: blockType, name, order_index: orderIndex }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Add block error:', error);
+      throw error;
+    }
+  }
+
+  async deleteBlock(blockId) {
+    try {
+      const response = await this.client.delete(`/admin/blocks/${blockId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Delete block error:', error);
+      throw error;
+    }
+  }
+
+  async addSection(universityId, role, name, headerColor = '#0088CC') {
+    try {
+      const response = await this.client.post('/admin/sections', {
+        university_id: universityId,
+        role,
+        name,
+        header_color: headerColor
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Add section error:', error);
+      throw error;
+    }
+  }
+
+  async deleteSection(sectionId) {
+    try {
+      const response = await this.client.delete(`/admin/sections/${sectionId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Delete section error:', error);
+      throw error;
+    }
+  }
+
+  async getTemplates(role = null) {
+    try {
+      const response = await this.client.get('/admin/templates', {
+        params: role ? { role } : {}
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Get templates error:', error);
+      throw error;
+    }
+  }
+
+  async saveTemplate(name, description, role, config) {
+    try {
+      const response = await this.client.post('/admin/templates', {
+        name,
+        description,
+        role,
+        config
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Save template error:', error);
+      throw error;
+    }
+  }
 }
 
 export default new UniversityAPIService();

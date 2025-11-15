@@ -17,10 +17,24 @@ const HomePage = () => {
         const role = user.role || localStorage.getItem('userRole') || 'student';
         const universityId = user.universityId || parseInt(localStorage.getItem('universityId') || '1');
 
-        // Получаем конфигурацию блоков для роли
+        // Получаем конфигурацию блоков для роли (теперь с разделами)
         const config = await apiService.getBlocksConfig(universityId, role);
-        setBlocks(config.blocks || []);
-        setUniversity(config.university_name);
+        
+        // Если есть новая структура с разделами
+        if (config.sections && config.sections.length > 0) {
+          // Берем блоки из первого раздела (пока работаем с одним разделом)
+          const firstSection = config.sections[0];
+          setBlocks(firstSection.blocks.map(b => b.block_type) || []);
+          setUniversity(config.university_name);
+          // Сохраняем цвет хедера если есть
+          if (config.header_color) {
+            document.documentElement.style.setProperty('--max-primary', config.header_color);
+          }
+        } else {
+          // Fallback на старую структуру
+          setBlocks(config.blocks || []);
+          setUniversity(config.university_name);
+        }
       } catch (error) {
         console.error('Error loading blocks:', error);
         // Используем дефолтные блоки при ошибке

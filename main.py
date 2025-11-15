@@ -8,6 +8,7 @@ import hmac
 import hashlib
 import httpx
 from datetime import datetime
+import database
 
 app = FastAPI(title="Digital University MAX Bot + Mini-App", version="2.0.0")
 
@@ -54,22 +55,12 @@ class InlineKeyboardButton(BaseModel):
 class InlineKeyboardMarkup(BaseModel):
     inline_keyboard: List[List[Dict]]
 
-# ============ ХРАНИЛИЩЕ (замените на БД) ============
-
-users_db = {}
-universities_db = {
-    1: {
-        "id": 1,
-        "name": "Российская академия народного хозяйства",
-        "short_name": "РАНХиГС",
-        "blocks_config": {
-            "student": ["profile", "schedule", "lms", "services", "life"],
-            "applicant": ["profile", "news", "admission", "payment"],
-            "employee": ["profile", "schedule", "services", "news"],
-            "admin": ["profile", "analytics", "config", "users", "all_blocks"]
-        }
-    }
-}
+# ============ БАЗА ДАННЫХ ============
+# Используем SQLite базы данных из database.py
+# Файлы .db создаются автоматически в папке data/
+# users_db и universities_db оставлены для обратной совместимости с ботом
+users_db = {}  # Временное хранилище для бота (можно заменить на БД)
+universities_db = {}  # Временное хранилище для бота
 
 # ============ MAX BOT API КЛИЕНТ ============
 
@@ -614,18 +605,17 @@ async def authenticate_user(user: User, x_max_init_data: Optional[str] = Header(
         except Exception as e:
             raise HTTPException(status_code=401, detail=f"Invalid init data: {str(e)}")
     
-    # Проверяем наличие пользователя
-    if user.max_user_id in users_db:
-        existing_user = users_db[user.max_user_id]
+    # Проверяем наличие пользователя в БД
+    existing_user = database.get_user(user.max_user_id)
+    if existing_user:
         return {
             "user": existing_user,
             "new_user": False,
             "message": "User already exists"
         }
     
-    # Создаём нового пользователя
-    new_user = {
-        "id": len(users_db) + 1,
+    # Создаём нового пользователя в БД
+    user_data = {
         "max_user_id": user.max_user_id,
         "first_name": user.first_name,
         "last_name": user.last_name,
@@ -633,11 +623,9 @@ async def authenticate_user(user: User, x_max_init_data: Optional[str] = Header(
         "photo_url": user.photo_url,
         "language_code": user.language_code,
         "role": user.role,
-        "university_id": user.university_id,
-        "created_at": datetime.now().isoformat()
+        "university_id": user.university_id or 1
     }
-    
-    users_db[user.max_user_id] = new_user
+    new_user = database.create_user(user_data)
     
     return {
         "user": new_user,
@@ -654,19 +642,21 @@ async def update_user_role(
     """
     Обновление роли пользователя
     """
-    if user_id not in users_db:
+    # Проверяем наличие пользователя в БД
+    existing_user = database.get_user(user_id)
+    if not existing_user:
         raise HTTPException(status_code=404, detail="User not found")
     
     valid_roles = ["student", "applicant", "employee", "admin"]
     if role not in valid_roles:
         raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of {valid_roles}")
     
-    users_db[user_id]["role"] = role
-    if university_id:
-        users_db[user_id]["university_id"] = university_id
+    # Обновляем роль в БД
+    database.update_user_role(user_id, role, university_id or 1)
+    updated_user = database.get_user(user_id)
     
     return {
-        "user": users_db[user_id],
+        "user": updated_user,
         "message": "Role updated successfully"
     }
 
@@ -675,30 +665,53 @@ async def get_university(university_id: int):
     """
     Получение информации о университете
     """
-    if university_id not in universities_db:
+    import sqlite3
+    conn = sqlite3.connect(database.UNIVERSITIES_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM universities WHERE id = ?", (university_id,))
+    row = cursor.fetchone()
+    conn.close()
+    
+    if not row:
         raise HTTPException(status_code=404, detail="University not found")
     
-    return universities_db[university_id]
+    return dict(row)
 
 @app.get("/api/universities/{university_id}/blocks")
 async def get_blocks_config(university_id: int, role: str):
     """
-    Получение конфигурации блоков для роли
+    Получение конфигурации блоков для роли из БД
     """
-    if university_id not in universities_db:
-        raise HTTPException(status_code=404, detail="University not found")
-    
-    university = universities_db[university_id]
     valid_roles = ["student", "applicant", "employee", "admin"]
-    
     if role not in valid_roles:
         raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of {valid_roles}")
     
-    blocks = university["blocks_config"].get(role, [])
+    # Получаем конфигурацию из БД
+    config = database.get_university_config(university_id, role)
+    
+    # Получаем название университета
+    import sqlite3
+    conn = sqlite3.connect(database.UNIVERSITIES_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT name, short_name FROM universities WHERE id = ?", (university_id,))
+    row = cursor.fetchone()
+    conn.close()
+    
+    university_name = row["name"] if row else "Университет"
+    
+    # Преобразуем структуру для совместимости
+    all_blocks = []
+    for section in config["sections"]:
+        for block in section["blocks"]:
+            all_blocks.append(block["block_type"])
     
     return {
-        "blocks": blocks,
-        "university_name": university.get("name", university.get("short_name", "")),
+        "blocks": all_blocks,
+        "sections": config["sections"],
+        "university_name": university_name,
+        "header_color": config["header_color"],
         "role": role
     }
 
@@ -710,8 +723,10 @@ async def get_schedule(date: Optional[str] = None, user_id: Optional[int] = None
     """
     # Получаем роль пользователя если есть
     role = None
-    if user_id and user_id in users_db:
-        role = users_db[user_id].get("role")
+    if user_id:
+        user = database.get_user(user_id)
+        if user:
+            role = user.get("role")
     
     # Моковые данные расписания для студентов
     mock_schedule_student = [
@@ -892,6 +907,99 @@ async def get_statistics(user_id: Optional[int] = None):
         "events_this_month": 12,
         "average_gpa": 3.8
     }
+# ============ МОДЕЛИ ДЛЯ АДМИН-ПАНЕЛИ ============
+
+class SectionNameUpdate(BaseModel):
+    name: str
+
+class HeaderColorUpdate(BaseModel):
+    color: str
+
+class BlockReorder(BaseModel):
+    block_ids: List[int]
+
+class BlockAdd(BaseModel):
+    block_type: str
+    name: str
+    order_index: Optional[int] = None
+
+class SectionAdd(BaseModel):
+    university_id: int
+    role: str
+    name: str
+    header_color: str = "#0088CC"
+
+class TemplateSave(BaseModel):
+    name: str
+    description: str
+    role: str
+    config: Dict
+
+# ============ АДМИН-ПАНЕЛЬ API ============
+
+@app.get("/api/admin/config/{university_id}/{role}")
+async def get_admin_config(university_id: int, role: str):
+    """Получить конфигурацию для редактирования (только для админов)"""
+    config = database.get_university_config(university_id, role)
+    return config
+
+@app.put("/api/admin/sections/{section_id}/name")
+async def update_section_name(section_id: int, data: SectionNameUpdate):
+    """Обновить название раздела"""
+    database.update_section_name(section_id, data.name)
+    return {"success": True, "message": "Section name updated"}
+
+@app.put("/api/admin/config/{university_id}/{role}/header-color")
+async def update_header_color_endpoint(
+    university_id: int, 
+    role: str, 
+    data: HeaderColorUpdate
+):
+    """Обновить цвет хедера для роли"""
+    database.update_header_color(university_id, role, data.color)
+    return {"success": True, "message": "Header color updated"}
+
+@app.post("/api/admin/blocks/reorder")
+async def reorder_blocks_endpoint(data: BlockReorder):
+    """Изменить порядок блоков (drag & drop)"""
+    database.reorder_blocks(data.block_ids)
+    return {"success": True, "message": "Blocks reordered"}
+
+@app.post("/api/admin/sections/{section_id}/blocks")
+async def add_block_endpoint(section_id: int, data: BlockAdd):
+    """Добавить блок в раздел"""
+    block_id = database.add_block(section_id, data.block_type, data.name, data.order_index)
+    return {"success": True, "block_id": block_id}
+
+@app.delete("/api/admin/blocks/{block_id}")
+async def delete_block_endpoint(block_id: int):
+    """Удалить блок"""
+    database.delete_block(block_id)
+    return {"success": True, "message": "Block deleted"}
+
+@app.post("/api/admin/sections")
+async def add_section_endpoint(data: SectionAdd):
+    """Добавить новый раздел"""
+    section_id = database.add_section(data.university_id, data.role, data.name, data.header_color)
+    return {"success": True, "section_id": section_id}
+
+@app.delete("/api/admin/sections/{section_id}")
+async def delete_section_endpoint(section_id: int):
+    """Удалить раздел"""
+    database.delete_section(section_id)
+    return {"success": True, "message": "Section deleted"}
+
+@app.get("/api/admin/templates")
+async def get_templates_endpoint(role: Optional[str] = None):
+    """Получить шаблоны"""
+    templates = database.get_templates(role)
+    return {"templates": templates}
+
+@app.post("/api/admin/templates")
+async def save_template_endpoint(data: TemplateSave):
+    """Сохранить шаблон"""
+    template_id = database.save_template(data.name, data.description, data.role, data.config)
+    return {"success": True, "template_id": template_id}
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
