@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useMAXBridge } from './useMAXBridge.v2';
 import apiService from './api-service';
-import BlockWidget from './Widgets/BlockWidget';
-import DigitalPassWidget from './Widgets/DigitalPassWidget';
+import BlockWidget from './Widgets/BlockWidget.jsx';
+import DigitalPassWidget from './Widgets/DigitalPassWidget.jsx';
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -189,7 +189,7 @@ const HomePage = () => {
         {sections.length > 0 && currentSection && currentSection.blocks.length > 0 ? (
           <div className="widgets-container">
             {currentSection.blocks.map((block) => (
-              <BlockWidget key={block.id} blockType={block.block_type} />
+              <BlockWidget key={block.id} block={block} apiService={apiService} />
             ))}
           </div>
         ) : (

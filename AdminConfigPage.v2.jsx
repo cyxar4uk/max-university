@@ -465,8 +465,6 @@ const AdminConfigPage = () => {
           </div>
         </div>
       )}
-
-      <UserSwitcher />
     </div>
   );
 };

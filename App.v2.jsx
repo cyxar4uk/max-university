@@ -28,6 +28,8 @@ function App() {
   const [showMockNotification, setShowMockNotification] = useState(false);
 
   useEffect(() => {
+    // Suppress React Router future flags warnings
+    window.__reactRouterVersion = 6;
     // Инициализация MAX Bridge
     if (window.WebApp) {
       window.WebApp.ready();

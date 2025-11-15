@@ -9,6 +9,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Копируем код приложения
 COPY main.py .
+COPY database.py .
+
+# Создаем директорию для баз данных
+RUN mkdir -p /app/data
 
 # Открываем порт
 EXPOSE 8000

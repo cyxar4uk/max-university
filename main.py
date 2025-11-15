@@ -1316,5 +1316,8 @@ const data = await apiService.getCustomData(config.endpoint);
         }
     }
 
+# Инициализация баз данных при запуске
+database.init_databases()
+
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

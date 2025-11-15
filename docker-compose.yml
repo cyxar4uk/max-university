@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build:
@@ -10,9 +8,11 @@ services:
       - "8000:8000"
     environment:
       - SECRET_KEY=your-secret-key-change-in-production
-      - MAX_BOT_TOKEN=your-max-bot-token-here
+      - MAX_BOT_TOKEN=f9LHodD0cOI5MJfQ6eqCiVzCVUt8Va__S2Nzwvj06nK6_VfYt4Ra9Sp04TSWBpi5vi_XOuNQ9MNBrHU6hsIu
     volumes:
       - ./main.py:/app/main.py
+      - ./database.py:/app/database.py
+      - ./data:/app/data
     restart: unless-stopped
 
   frontend:
@@ -22,6 +22,8 @@ services:
     container_name: max-university-frontend
     ports:
       - "80:80"
+    environment:
+      - VITE_API_URL=http://localhost:8000/api
     depends_on:
       - backend
     restart: unless-stopped
