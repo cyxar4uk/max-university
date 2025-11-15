@@ -140,19 +140,62 @@ class UniversityAPIService {
       return response.data;
     } catch (error) {
       console.error('Get blocks config error:', error);
-      // Возвращаем мок-конфигурацию при ошибке
+      // Возвращаем мок-конфигурацию при ошибке с sections
       const defaultBlocks = {
-        student: ["profile", "schedule", "lms", "services", "life"],
-        applicant: ["profile", "news", "admission", "payment"],
-        employee: ["profile", "schedule", "services", "news"],
-        admin: ["profile", "analytics", "config", "users", "all_blocks"]
+        student: ["schedule", "lms", "services", "life", "news"],
+        applicant: ["news", "admission", "payment"],
+        employee: ["schedule", "services", "news"],
+        admin: ["analytics", "config", "users"]
+      };
+      const blocks = defaultBlocks[role] || defaultBlocks.student;
+      const getBlockName = (bt) => {
+        const names = {
+          schedule: 'Расписание',
+          lms: 'Учебные материалы',
+          services: 'Услуги',
+          life: 'Внеучебная жизнь',
+          news: 'Новости',
+          admission: 'Поступление',
+          payment: 'Оплата',
+          analytics: 'Аналитика',
+          config: 'Настройки',
+          users: 'Пользователи',
+        };
+        return names[bt] || bt;
       };
       return {
-        blocks: defaultBlocks[role] || defaultBlocks.student,
+        sections: [{
+          id: 1,
+          name: "Главное",
+          blocks: blocks.map((bt, idx) => ({
+            id: idx + 1,
+            block_type: bt,
+            name: getBlockName(bt),
+            order_index: idx
+          })),
+          header_color: "#0088CC"
+        }],
         university_name: "Российская академия народного хозяйства",
+        header_color: "#0088CC",
         role: role
       };
     }
+  }
+
+  getBlockName(blockType) {
+    const names = {
+      schedule: 'Расписание',
+      lms: 'Учебные материалы',
+      services: 'Услуги',
+      life: 'Внеучебная жизнь',
+      news: 'Новости',
+      admission: 'Поступление',
+      payment: 'Оплата',
+      analytics: 'Аналитика',
+      config: 'Настройки',
+      users: 'Пользователи',
+    };
+    return names[blockType] || blockType;
   }
 
   // Получение расписания
