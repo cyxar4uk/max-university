@@ -1020,5 +1020,140 @@ async def save_template_endpoint(data: TemplateSave):
     template_id = database.save_template(data.name, data.description, data.role, data.config)
     return {"success": True, "template_id": template_id}
 
+# ============ МОДЕРАЦИЯ КАСТОМНЫХ БЛОКОВ ============
+
+class CustomBlockSubmit(BaseModel):
+    block_type: str
+    name: str
+    description: str
+    code: str  # JavaScript код виджета
+    config_schema: Dict  # JSON схема конфигурации
+
+class CustomBlockReview(BaseModel):
+    status: str  # 'approved' or 'rejected'
+    review_notes: str = ""
+
+@app.post("/api/admin/custom-blocks/submit")
+async def submit_custom_block_endpoint(data: CustomBlockSubmit, user_id: int = Header(None, alias="X-MAX-User-ID")):
+    """Отправить кастомный блок на модерацию"""
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User ID required")
+    
+    # Проверяем, что пользователь - админ университета
+    user = database.get_user(user_id)
+    if not user or user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only university admins can submit custom blocks")
+    
+    block_id = database.submit_custom_block(
+        university_id=user.get("university_id", 1),
+        submitted_by_user_id=user_id,
+        block_type=data.block_type,
+        name=data.name,
+        description=data.description,
+        code=data.code,
+        config_schema=data.config_schema
+    )
+    
+    return {"success": True, "block_id": block_id, "message": "Custom block submitted for moderation"}
+
+@app.get("/api/admin/custom-blocks/pending")
+async def get_pending_blocks_endpoint(user_id: int = Header(None, alias="X-MAX-User-ID")):
+    """Получить список блоков на модерации (только для суперадминов)"""
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User ID required")
+    
+    # TODO: Проверка на суперадмина приложения
+    # Пока возвращаем для всех админов
+    
+    blocks = database.get_pending_custom_blocks()
+    return {"blocks": blocks}
+
+@app.post("/api/admin/custom-blocks/{block_id}/review")
+async def review_custom_block_endpoint(
+    block_id: int, 
+    data: CustomBlockReview,
+    user_id: int = Header(None, alias="X-MAX-User-ID")
+):
+    """Одобрить или отклонить кастомный блок (только для суперадминов)"""
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User ID required")
+    
+    # TODO: Проверка на суперадмина приложения
+    
+    database.review_custom_block(block_id, user_id, data.status, data.review_notes)
+    return {"success": True, "message": f"Block {data.status}"}
+
+@app.get("/api/admin/custom-blocks/approved")
+async def get_approved_blocks_endpoint(university_id: Optional[int] = None):
+    """Получить одобренные кастомные блоки"""
+    blocks = database.get_approved_custom_blocks(university_id)
+    return {"blocks": blocks}
+
+@app.get("/api/admin/custom-blocks/standards")
+async def get_development_standards():
+    """Получить стандарты разработки для кастомных блоков"""
+    return {
+        "standards": {
+            "widget_structure": {
+                "description": "Виджет должен быть React компонентом, экспортируемым по умолчанию",
+                "example": """
+import React from 'react';
+
+const CustomWidget = ({ config }) => {
+  return (
+    <div className="widget custom-widget">
+      <div className="widget-header">
+        <h3 className="widget-title">{config.title || 'Custom Widget'}</h3>
+      </div>
+      <div className="widget-content">
+        {/* Ваш контент */}
+      </div>
+    </div>
+  );
+};
+
+export default CustomWidget;
+                """.strip()
+            },
+            "props": {
+                "config": "Объект конфигурации, переданный администратором",
+                "apiService": "Сервис для работы с API (опционально)"
+            },
+            "styling": {
+                "description": "Используйте классы .widget, .widget-header, .widget-content для базовых стилей",
+                "custom_styles": "Можно добавлять собственные классы, но избегайте конфликтов"
+            },
+            "api_usage": {
+                "description": "Для работы с API используйте apiService из props",
+                "example": """
+const data = await apiService.getCustomData(config.endpoint);
+                """.strip()
+            },
+            "security": {
+                "description": "Код будет проверен на безопасность перед одобрением",
+                "restrictions": [
+                    "Не используйте eval() или Function()",
+                    "Не обращайтесь к window или document напрямую без необходимости",
+                    "Не используйте внешние скрипты без одобрения"
+                ]
+            },
+            "submission_format": {
+                "code": "JavaScript/JSX код виджета",
+                "config_schema": "JSON Schema для конфигурации блока",
+                "name": "Название блока",
+                "description": "Описание функционала"
+            }
+        },
+        "example_config_schema": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string", "default": "Custom Block"},
+                "endpoint": {"type": "string"},
+                "refreshInterval": {"type": "number", "default": 60}
+            },
+            "required": ["title"]
+        }
+    }
+
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

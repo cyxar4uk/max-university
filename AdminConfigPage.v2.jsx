@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import apiService from './api-service';
-import UserSwitcher from './UserSwitcher';
 
 // Компонент для drag & drop блоков
 const DraggableBlock = ({ block, index, onDragStart, onDragOver, onDrop, onDelete }) => {
@@ -266,7 +265,6 @@ const AdminConfigPage = () => {
             Создать раздел
           </button>
         </div>
-        <UserSwitcher />
       </div>
     );
   }

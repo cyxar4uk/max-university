@@ -703,6 +703,82 @@
   color: var(--max-text-secondary);
 }
 
+/* Mock Mode Notification */
+.mock-mode-notification {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: var(--max-warning);
+  color: white;
+  z-index: 10000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.mock-notification-content {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.mock-notification-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.mock-notification-icon {
+  font-size: 24px;
+}
+
+.mock-notification-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.mock-notification-text {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.mock-notification-error {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.mock-notification-error strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.mock-notification-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.mock-notification-countdown {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
 * {
   margin: 0;
   padding: 0;

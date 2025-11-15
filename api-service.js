@@ -1,4 +1,5 @@
 import axios from 'axios';
+import errorLogger from './utils/errorLogger';
 
 // В Vite используем import.meta.env вместо process.env
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
@@ -14,6 +15,8 @@ class UniversityAPIService {
       baseURL: API_BASE_URL,
       timeout: 10000,
     });
+    this.mockMode = false;
+    this.mockModeListeners = [];
 
     // Интерцептор для добавления информации MAX Bridge в заголовки
     this.client.interceptors.request.use((config) => {
@@ -32,12 +35,46 @@ class UniversityAPIService {
 
     // Интерцептор для обработки ошибок
     this.client.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        // Если получили успешный ответ, выходим из мок-режима
+        if (this.mockMode) {
+          this.setMockMode(false);
+        }
+        return response;
+      },
       (error) => {
-        console.error('API Error:', error);
+        // Логируем ошибку
+        errorLogger.logError(error, {
+          url: error.config?.url,
+          method: error.config?.method
+        });
+
+        // Если это ошибка сети или таймаут, включаем мок-режим
+        if (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK' || !error.response) {
+          if (!this.mockMode) {
+            this.setMockMode(true, error);
+          }
+        }
+
         return Promise.reject(error);
       }
     );
+  }
+
+  setMockMode(enabled, error = null) {
+    this.mockMode = enabled;
+    this.mockModeListeners.forEach(listener => listener(enabled, error));
+  }
+
+  onMockModeChange(listener) {
+    this.mockModeListeners.push(listener);
+    return () => {
+      this.mockModeListeners = this.mockModeListeners.filter(l => l !== listener);
+    };
+  }
+
+  isMockMode() {
+    return this.mockMode;
   }
 
   // Аутентификация пользователя
@@ -539,6 +576,81 @@ class UniversityAPIService {
     } catch (error) {
       console.error('Reorder sections error:', error);
       throw error;
+    }
+  }
+
+  // Кастомные блоки
+  async submitCustomBlock(data) {
+    try {
+      const response = await this.client.post('/admin/custom-blocks/submit', data);
+      return response.data;
+    } catch (error) {
+      console.error('Submit custom block error:', error);
+      throw error;
+    }
+  }
+
+  async getPendingCustomBlocks() {
+    try {
+      const response = await this.client.get('/admin/custom-blocks/pending');
+      return response.data;
+    } catch (error) {
+      console.error('Get pending blocks error:', error);
+      throw error;
+    }
+  }
+
+  async reviewCustomBlock(blockId, status, reviewNotes = '') {
+    try {
+      const response = await this.client.post(
+        `/admin/custom-blocks/${blockId}/review`,
+        { status, review_notes: reviewNotes }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Review custom block error:', error);
+      throw error;
+    }
+  }
+
+  async getApprovedCustomBlocks(universityId = null) {
+    try {
+      const response = await this.client.get('/admin/custom-blocks/approved', {
+        params: universityId ? { university_id: universityId } : {}
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Get approved blocks error:', error);
+      throw error;
+    }
+  }
+
+  async getDevelopmentStandards() {
+    try {
+      const response = await this.client.get('/admin/custom-blocks/standards');
+      return response.data;
+    } catch (error) {
+      console.error('Get development standards error:', error);
+      // Возвращаем мок-данные при ошибке
+      return {
+        standards: {
+          widget_structure: {
+            description: "Виджет должен быть React компонентом",
+            example: "import React from 'react';\n\nconst CustomWidget = ({ config }) => {\n  return <div className=\"widget\">...</div>;\n};\n\nexport default CustomWidget;"
+          },
+          props: {
+            config: "Объект конфигурации",
+            apiService: "Сервис для работы с API"
+          },
+          security: {
+            restrictions: [
+              "Не используйте eval()",
+              "Не обращайтесь к window напрямую",
+              "Не используйте внешние скрипты"
+            ]
+          }
+        }
+      };
     }
   }
 }

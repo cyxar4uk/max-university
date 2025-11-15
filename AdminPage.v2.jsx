@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiService from './api-service';
-import UserSwitcher from './UserSwitcher';
 
 const roles = ['student', 'applicant', 'employee', 'admin'];
 const roleNames = {
@@ -66,6 +65,14 @@ const AdminPage = () => {
         </div>
       </div>
 
+      <div style={{ marginBottom: '24px' }}>
+        <h2 style={{ marginBottom: '16px', fontSize: '18px' }}>Кастомные блоки</h2>
+        <div className="card card-clickable" onClick={() => navigate('/admin/custom-blocks')}>
+          <h3 className="card-title">📦 Создать кастомный блок</h3>
+          <p className="card-text">Отправить свой виджет на модерацию</p>
+        </div>
+      </div>
+
       <h2 style={{ marginBottom: '16px', fontSize: '18px' }}>Статистика университета</h2>
 
       {loading ? (
@@ -106,7 +113,6 @@ const AdminPage = () => {
         </div>
       )}
 
-      <UserSwitcher />
     </div>
   );
 };

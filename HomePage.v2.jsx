@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useMAXBridge } from './useMAXBridge.v2';
 import apiService from './api-service';
-import UserSwitcher from './UserSwitcher';
 import BlockWidget from './Widgets/BlockWidget';
 import DigitalPassWidget from './Widgets/DigitalPassWidget';
 
@@ -209,22 +208,24 @@ const HomePage = () => {
           <span className="nav-icon">🏠</span>
           <span className="nav-label">Главное</span>
         </button>
-        <button 
-          className={`nav-item ${activeNavTab === 'section1' ? 'active' : ''}`}
-          onClick={() => handleNavClick('section1')}
-          disabled={sections.length === 0}
-        >
-          <span className="nav-icon">📋</span>
-          <span className="nav-label">{sections[0]?.name || 'Раздел 1'}</span>
-        </button>
-        <button 
-          className={`nav-item ${activeNavTab === 'section2' ? 'active' : ''}`}
-          onClick={() => handleNavClick('section2')}
-          disabled={sections.length < 2}
-        >
-          <span className="nav-icon">📄</span>
-          <span className="nav-label">{sections[1]?.name || 'Раздел 2'}</span>
-        </button>
+        {sections.length > 1 && (
+          <button 
+            className={`nav-item ${activeNavTab === 'section1' ? 'active' : ''}`}
+            onClick={() => handleNavClick('section1')}
+          >
+            <span className="nav-icon">📋</span>
+            <span className="nav-label">{sections[0]?.name || 'Раздел 1'}</span>
+          </button>
+        )}
+        {sections.length > 2 && (
+          <button 
+            className={`nav-item ${activeNavTab === 'section2' ? 'active' : ''}`}
+            onClick={() => handleNavClick('section2')}
+          >
+            <span className="nav-icon">📄</span>
+            <span className="nav-label">{sections[1]?.name || 'Раздел 2'}</span>
+          </button>
+        )}
         {user.role === 'admin' && (
           <button 
             className={`nav-item ${activeNavTab === 'admin' ? 'active' : ''}`}
@@ -251,7 +252,6 @@ const HomePage = () => {
         </div>
       )}
 
-      <UserSwitcher />
     </div>
   );
 };

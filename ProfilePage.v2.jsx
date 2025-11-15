@@ -69,7 +69,13 @@ const ProfilePage = () => {
         <p className="card-text">Российская академия народного хозяйства</p>
       </div>
 
-      <UserSwitcher />
+      <div className="card" style={{ marginTop: '16px' }}>
+        <h3 className="card-title" style={{ marginBottom: '12px' }}>Тестирование</h3>
+        <p className="card-text" style={{ marginBottom: '12px' }}>
+          Переключитесь между тестовыми пользователями для проверки разных ролей
+        </p>
+        <UserSwitcher />
+      </div>
     </div>
   );
 };

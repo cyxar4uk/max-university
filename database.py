@@ -60,17 +60,18 @@ def init_universities_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             short_name TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            description TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
     
     # Добавляем дефолтный университет если его нет
-    cursor.execute("SELECT COUNT(*) FROM universities")
+    cursor.execute("SELECT COUNT(*) FROM universities WHERE id = 1")
     if cursor.fetchone()[0] == 0:
         cursor.execute("""
-            INSERT INTO universities (id, name, short_name)
-            VALUES (1, 'Российская академия народного хозяйства', 'РАНХиГС')
+            INSERT INTO universities (id, name, short_name, description)
+            VALUES (1, 'Российская академия народного хозяйства', 'РАНХиГС', 
+                    'Федеральное государственное бюджетное образовательное учреждение высшего образования')
         """)
     
     conn.commit()
@@ -78,7 +79,7 @@ def init_universities_db():
 
 
 def init_config_db():
-    """Инициализация базы данных конфигураций (разделы, блоки, настройки)"""
+    """Инициализация базы данных конфигураций"""
     conn = sqlite3.connect(CONFIG_DB_PATH)
     cursor = conn.cursor()
     
@@ -92,8 +93,7 @@ def init_config_db():
             order_index INTEGER DEFAULT 0,
             header_color TEXT DEFAULT '#0088CC',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(university_id, role, name)
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
     
@@ -124,6 +124,27 @@ def init_config_db():
         )
     """)
     
+    # Таблица кастомных блоков (custom_blocks) для модерации
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS custom_blocks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            university_id INTEGER NOT NULL,
+            submitted_by_user_id INTEGER NOT NULL,
+            block_type TEXT NOT NULL,
+            name TEXT NOT NULL,
+            description TEXT,
+            code TEXT NOT NULL,  -- JavaScript код виджета
+            config_schema TEXT,  -- JSON схема конфигурации
+            status TEXT DEFAULT 'pending',  -- pending, approved, rejected
+            reviewed_by_user_id INTEGER,
+            review_notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            reviewed_at TIMESTAMP,
+            FOREIGN KEY (university_id) REFERENCES universities(id),
+            FOREIGN KEY (submitted_by_user_id) REFERENCES users(id)
+        )
+    """)
+    
     # Инициализация дефолтных разделов и блоков
     init_default_config(cursor)
     
@@ -138,29 +159,29 @@ def init_default_config(cursor):
     if cursor.fetchone()[0] > 0:
         return
     
-    # Дефолтные разделы и блоки для каждой роли
+    # Дефолтные разделы и блоки для каждой роли (по умолчанию один раздел)
     default_configs = {
         "student": {
             "sections": [
-                {"name": "Главное", "blocks": ["profile", "schedule", "lms", "services", "life"]},
+                {"name": "Главное", "blocks": ["schedule", "lms", "services", "life", "news"]},
             ],
             "header_color": "#0088CC"
         },
         "applicant": {
             "sections": [
-                {"name": "Главное", "blocks": ["profile", "news", "admission", "payment"]},
+                {"name": "Главное", "blocks": ["news", "admission", "payment"]},
             ],
             "header_color": "#0088CC"
         },
         "employee": {
             "sections": [
-                {"name": "Главное", "blocks": ["profile", "schedule", "services", "news"]},
+                {"name": "Главное", "blocks": ["schedule", "services", "news"]},
             ],
             "header_color": "#0088CC"
         },
         "admin": {
             "sections": [
-                {"name": "Главное", "blocks": ["profile", "analytics", "config", "users"]},
+                {"name": "Главное", "blocks": ["analytics", "config", "users"]},
             ],
             "header_color": "#0088CC"
         }
@@ -178,7 +199,6 @@ def init_default_config(cursor):
             # Создаем блоки в разделе
             for block_idx, block_type in enumerate(section["blocks"]):
                 block_names = {
-                    "profile": "Профиль",
                     "schedule": "Расписание",
                     "lms": "Учебные материалы",
                     "services": "Услуги",
@@ -264,24 +284,32 @@ def get_university_config(university_id: int, role: str) -> Dict:
     cursor.execute("""
         SELECT * FROM sections 
         WHERE university_id = ? AND role = ?
-        ORDER BY order_index
+        ORDER BY order_index ASC
     """, (university_id, role))
-    sections = [dict(row) for row in cursor.fetchall()]
     
-    # Получаем блоки для каждого раздела
-    for section in sections:
+    sections = []
+    for section_row in cursor.fetchall():
+        section = dict(section_row)
+        
+        # Получаем блоки раздела
         cursor.execute("""
             SELECT * FROM blocks 
             WHERE section_id = ?
-            ORDER BY order_index
+            ORDER BY order_index ASC
         """, (section["id"],))
+        
         section["blocks"] = [dict(row) for row in cursor.fetchall()]
+        sections.append(section)
+    
+    # Получаем цвет хедера (из первого раздела или дефолтный)
+    header_color = sections[0]["header_color"] if sections else "#0088CC"
     
     conn.close()
     
     return {
         "sections": sections,
-        "header_color": sections[0]["header_color"] if sections else "#0088CC"
+        "header_color": header_color,
+        "role": role
     }
 
 
@@ -316,7 +344,7 @@ def update_header_color(university_id: int, role: str, color: str):
 
 
 def reorder_blocks(block_ids: List[int]):
-    """Изменить порядок блоков (для drag & drop)"""
+    """Изменить порядок блоков"""
     conn = sqlite3.connect(CONFIG_DB_PATH)
     cursor = conn.cursor()
     
@@ -331,7 +359,7 @@ def reorder_blocks(block_ids: List[int]):
     conn.close()
 
 
-def add_block(section_id: int, block_type: str, name: str, order_index: int = None):
+def add_block(section_id: int, block_type: str, name: str, order_index: Optional[int] = None):
     """Добавить блок в раздел"""
     conn = sqlite3.connect(CONFIG_DB_PATH)
     cursor = conn.cursor()
@@ -339,8 +367,8 @@ def add_block(section_id: int, block_type: str, name: str, order_index: int = No
     # Если order_index не указан, добавляем в конец
     if order_index is None:
         cursor.execute("SELECT MAX(order_index) FROM blocks WHERE section_id = ?", (section_id,))
-        max_order = cursor.fetchone()[0]
-        order_index = (max_order + 1) if max_order is not None else 0
+        result = cursor.fetchone()
+        order_index = (result[0] + 1) if result[0] is not None else 0
     
     cursor.execute("""
         INSERT INTO blocks (section_id, block_type, name, order_index)
@@ -365,14 +393,18 @@ def delete_block(block_id: int):
     conn.close()
 
 
-def add_section(university_id: int, role: str, name: str, header_color: str = "#0088CC"):
+def add_section(university_id: int, role: str, name: str, header_color: str = "#0088CC") -> int:
     """Добавить новый раздел"""
     conn = sqlite3.connect(CONFIG_DB_PATH)
     cursor = conn.cursor()
     
-    cursor.execute("SELECT MAX(order_index) FROM sections WHERE university_id = ? AND role = ?", (university_id, role))
-    max_order = cursor.fetchone()[0]
-    order_index = (max_order + 1) if max_order is not None else 0
+    # Определяем order_index (добавляем в конец)
+    cursor.execute("""
+        SELECT MAX(order_index) FROM sections 
+        WHERE university_id = ? AND role = ?
+    """, (university_id, role))
+    result = cursor.fetchone()
+    order_index = (result[0] + 1) if result[0] is not None else 0
     
     cursor.execute("""
         INSERT INTO sections (university_id, role, name, order_index, header_color)
@@ -397,8 +429,8 @@ def delete_section(section_id: int):
     conn.close()
 
 
-def get_templates(role: str = None) -> List[Dict]:
-    """Получить шаблоны (опционально фильтр по роли)"""
+def get_templates(role: Optional[str] = None) -> List[Dict]:
+    """Получить шаблоны"""
     conn = sqlite3.connect(CONFIG_DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
@@ -414,7 +446,7 @@ def get_templates(role: str = None) -> List[Dict]:
     return templates
 
 
-def save_template(name: str, description: str, role: str, config: Dict):
+def save_template(name: str, description: str, role: str, config: Dict) -> int:
     """Сохранить шаблон"""
     conn = sqlite3.connect(CONFIG_DB_PATH)
     cursor = conn.cursor()
@@ -431,6 +463,130 @@ def save_template(name: str, description: str, role: str, config: Dict):
     return template_id
 
 
-# Инициализация при импорте
-init_databases()
+# ============ ФУНКЦИИ ДЛЯ РАБОТЫ С КАСТОМНЫМИ БЛОКАМИ (МОДЕРАЦИЯ) ============
 
+def submit_custom_block(university_id: int, submitted_by_user_id: int, block_type: str, 
+                       name: str, description: str, code: str, config_schema: Dict) -> int:
+    """Отправить кастомный блок на модерацию"""
+    conn = sqlite3.connect(CONFIG_DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        INSERT INTO custom_blocks 
+        (university_id, submitted_by_user_id, block_type, name, description, code, config_schema, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
+    """, (
+        university_id,
+        submitted_by_user_id,
+        block_type,
+        name,
+        description,
+        code,
+        json.dumps(config_schema)
+    ))
+    
+    block_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    
+    return block_id
+
+
+def get_pending_custom_blocks() -> List[Dict]:
+    """Получить список кастомных блоков на модерации"""
+    conn = sqlite3.connect(CONFIG_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT cb.*, u.first_name, u.last_name, u.username, u.university_id
+        FROM custom_blocks cb
+        LEFT JOIN users u ON cb.submitted_by_user_id = u.id
+        WHERE cb.status = 'pending'
+        ORDER BY cb.created_at ASC
+    """)
+    
+    blocks = []
+    for row in cursor.fetchall():
+        block = dict(row)
+        if block.get("config_schema"):
+            try:
+                block["config_schema"] = json.loads(block["config_schema"])
+            except:
+                block["config_schema"] = {}
+        blocks.append(block)
+    
+    conn.close()
+    return blocks
+
+
+def review_custom_block(block_id: int, reviewed_by_user_id: int, status: str, review_notes: str = ""):
+    """Одобрить или отклонить кастомный блок"""
+    if status not in ['approved', 'rejected']:
+        raise ValueError("Status must be 'approved' or 'rejected'")
+    
+    conn = sqlite3.connect(CONFIG_DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        UPDATE custom_blocks 
+        SET status = ?, reviewed_by_user_id = ?, review_notes = ?, reviewed_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (status, reviewed_by_user_id, review_notes, block_id))
+    
+    conn.commit()
+    conn.close()
+
+
+def get_approved_custom_blocks(university_id: Optional[int] = None) -> List[Dict]:
+    """Получить одобренные кастомные блоки"""
+    conn = sqlite3.connect(CONFIG_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    if university_id:
+        cursor.execute("""
+            SELECT * FROM custom_blocks 
+            WHERE status = 'approved' AND university_id = ?
+            ORDER BY created_at DESC
+        """, (university_id,))
+    else:
+        cursor.execute("""
+            SELECT * FROM custom_blocks 
+            WHERE status = 'approved'
+            ORDER BY created_at DESC
+        """)
+    
+    blocks = []
+    for row in cursor.fetchall():
+        block = dict(row)
+        if block.get("config_schema"):
+            try:
+                block["config_schema"] = json.loads(block["config_schema"])
+            except:
+                block["config_schema"] = {}
+        blocks.append(block)
+    
+    conn.close()
+    return blocks
+
+
+def get_custom_block_by_id(block_id: int) -> Optional[Dict]:
+    """Получить кастомный блок по ID"""
+    conn = sqlite3.connect(CONFIG_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT * FROM custom_blocks WHERE id = ?", (block_id,))
+    row = cursor.fetchone()
+    conn.close()
+    
+    if row:
+        block = dict(row)
+        if block.get("config_schema"):
+            try:
+                block["config_schema"] = json.loads(block["config_schema"])
+            except:
+                block["config_schema"] = {}
+        return block
+    return None
