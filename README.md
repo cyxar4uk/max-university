@@ -435,12 +435,6 @@ max-university/
 
 ## Конфигурация
 
-### MAX Bot Token
-Токен бота настроен в main.py:
-```python
-MAX_BOT_TOKEN = "f9LHodD0cOI5MJfQ6eqCiVzCVUt8Va__S2Nzwvj06nK6_VfYt4Ra9Sp04TSWBpi5vi_XOuNQ9MNBrHU6hsIu"
-```
-
 ### Ссылки на мини-приложение
 Все URL обновлены для пользователя cyxar4uk:
 ```
