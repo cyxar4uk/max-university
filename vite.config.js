@@ -23,7 +23,6 @@ export default defineConfig({
       output: {
         manualChunks: {
           'vendor': ['react', 'react-dom', 'react-router-dom'],
-          'vk': ['@vkontakte/vkui', '@vkontakte/vk-bridge', '@vkontakte/icons'],
           'redux': ['@reduxjs/toolkit', 'react-redux'],
         },
       },
