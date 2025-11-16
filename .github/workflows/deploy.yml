@@ -44,6 +44,14 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
+      - name: Copy .nojekyll to dist
+        run: |
+          if [ -f .nojekyll ]; then
+            cp .nojekyll dist/
+          else
+            touch dist/.nojekyll
+          fi
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
