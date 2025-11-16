@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { setUserFromMAX } from './userSlice';
-import apiService from './api-service';
-import { getMockUserByRole } from './mockUsers';
+import { setUserFromMAX } from './userSlice.js';
+import apiService from './api-service.js';
+import { getMockUserByRole } from './mockUsers.js';
 
 const WelcomePage = () => {
   const navigate = useNavigate();

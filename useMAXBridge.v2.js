@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { getMockUserByRole } from './mockUsers';
+import { getMockUserByRole } from './mockUsers.js';
 
 /**
  * Custom hook для работы с MAX Bridge

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { setUserFromMAX } from './userSlice';
-import { mockUsers } from './mockUsers';
+import { setUserFromMAX } from './userSlice.js';
+import { mockUsers } from './mockUsers.js';
 
 // Компонент для переключения между тестовыми пользователями
 const UserSwitcher = () => {

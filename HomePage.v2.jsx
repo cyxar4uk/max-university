@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { useMAXBridge } from './useMAXBridge.v2';
-import apiService from './api-service';
+import { useMAXBridge } from './useMAXBridge.v2.js';
+import apiService from './api-service.js';
 import BlockWidget from './Widgets/BlockWidget.jsx';
 import DigitalPassWidget from './Widgets/DigitalPassWidget.jsx';
 

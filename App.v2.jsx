@@ -1,27 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Provider } from 'react-redux';
-import { store } from './store';
+import { store } from './store.js';
 import './styles.css';
-import apiService from './api-service';
-import MockModeNotification from './components/MockModeNotification';
+import apiService from './api-service.js';
+import MockModeNotification from './components/MockModeNotification.jsx';
 
 // Pages
-import WelcomePage from './WelcomePage.v2';
-import HomePage from './HomePage.v2';
-import ProfilePage from './ProfilePage.v2';
-import SchedulePage from './SchedulePage.v2';
-import CoursesPage from './CoursesPage.v2';
-import AdminPage from './AdminPage.v2';
-import AdminConfigPage from './AdminConfigPage.v2';
-import CustomBlocksPage from './pages/CustomBlocksPage.v2';
-import InvitationCodesPage from './pages/InvitationCodesPage.v2';
-import SuperAdminPage from './pages/SuperAdminPage.v2';
-import ServicesPage from './ServicesPage.v2';
-import EventsPage from './EventsPage.v2';
-import NewsPage from './NewsPage.v2';
-import PaymentPage from './PaymentPage.v2';
-import AdmissionPage from './AdmissionPage.v2';
+import WelcomePage from './WelcomePage.v2.jsx';
+import HomePage from './HomePage.v2.jsx';
+import ProfilePage from './ProfilePage.v2.jsx';
+import SchedulePage from './SchedulePage.v2.jsx';
+import CoursesPage from './CoursesPage.v2.jsx';
+import AdminPage from './AdminPage.v2.jsx';
+import AdminConfigPage from './AdminConfigPage.v2.jsx';
+import CustomBlocksPage from './pages/CustomBlocksPage.v2.jsx';
+import InvitationCodesPage from './pages/InvitationCodesPage.v2.jsx';
+import SuperAdminPage from './pages/SuperAdminPage.v2.jsx';
+import ServicesPage from './ServicesPage.v2.jsx';
+import EventsPage from './EventsPage.v2.jsx';
+import NewsPage from './NewsPage.v2.jsx';
+import PaymentPage from './PaymentPage.v2.jsx';
+import AdmissionPage from './AdmissionPage.v2.jsx';
 
 function App() {
   const [mockModeError, setMockModeError] = useState(null);
