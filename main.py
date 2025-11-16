@@ -561,9 +561,11 @@ def get_user_id_from_headers(x_max_user_id: Optional[str] = Header(None)) -> int
     """
     Извлекает ID пользователя из заголовков, которые устанавливает frontend
     через интерцептор в MAX Bridge
+    В мок-режиме возвращает дефолтный ID
     """
     if not x_max_user_id:
-        raise HTTPException(status_code=401, detail="User ID not provided")
+        # В мок-режиме используем дефолтный тестовый ID
+        return 10001
     
     try:
         return int(x_max_user_id)
@@ -647,7 +649,7 @@ async def update_user_role(
     if not existing_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    valid_roles = ["student", "applicant", "employee", "admin"]
+    valid_roles = ["student", "applicant", "employee", "teacher", "admin"]
     if role not in valid_roles:
         raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of {valid_roles}")
     
@@ -683,7 +685,7 @@ async def get_blocks_config(university_id: int, role: str):
     """
     Получение конфигурации блоков для роли из БД
     """
-    valid_roles = ["student", "applicant", "employee", "admin"]
+    valid_roles = ["student", "applicant", "employee", "teacher", "admin"]
     if role not in valid_roles:
         raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of {valid_roles}")
     
@@ -716,10 +718,18 @@ async def get_blocks_config(university_id: int, role: str):
     }
 
 @app.get("/api/schedule")
-async def get_schedule(date: Optional[str] = None, user_id: Optional[int] = None):
+async def get_schedule(
+    date: Optional[str] = None, 
+    user_id: Optional[int] = None,
+    education_level: Optional[str] = None,
+    direction: Optional[str] = None,
+    course: Optional[str] = None,
+    group: Optional[str] = None
+):
     """
     Получение расписания пользователя
     Моковые данные для разных ролей
+    Поддерживает фильтры для админов
     """
     # Получаем роль пользователя если есть
     role = None
@@ -728,31 +738,44 @@ async def get_schedule(date: Optional[str] = None, user_id: Optional[int] = None
         if user:
             role = user.get("role")
     
-    # Моковые данные расписания для студентов
+    # Моковые данные расписания для студентов (в формате как в примерах)
     mock_schedule_student = [
         {
             "id": 1,
-            "time": "09:00-10:30",
-            "subject": "Математический анализ",
-            "room": "Аудитория 401",
-            "teacher": "Иванов И.И.",
-            "type": "Лекция"
+            "time": "14:00 - 14:30",
+            "time_start": "14:00",
+            "time_end": "14:30",
+            "subject": "Введение в экономику",
+            "room": "B0308",
+            "location": "B0308",
+            "teacher": "Елена Наумова",
+            "type": "Семинар",
+            "indicator": "H",
+            "indicator_type": "homework"
         },
         {
             "id": 2,
-            "time": "10:45-12:15",
-            "subject": "Программирование",
-            "room": "Компьютерный класс 305",
-            "teacher": "Петров П.П.",
-            "type": "Практика"
+            "time": "15:50 - 17:10",
+            "time_start": "15:50",
+            "time_end": "17:10",
+            "subject": "Основы Go",
+            "room": "B0401",
+            "location": "B0401",
+            "teacher": "Крутой препод",
+            "type": "Семинар",
+            "indicator": "10",
+            "indicator_type": "minutes"
         },
         {
             "id": 3,
-            "time": "13:00-14:30",
-            "subject": "Базы данных",
-            "room": "Аудитория 502",
-            "teacher": "Сидорова С.С.",
-            "type": "Семинар"
+            "time": "18:00 - 19:30",
+            "time_start": "18:00",
+            "time_end": "19:30",
+            "subject": "Матан, Ю1.2",
+            "room": "Байкал",
+            "location": "Байкал",
+            "teacher": "Крутой препод",
+            "type": "Лекция"
         }
     ]
     
@@ -779,8 +802,26 @@ async def get_schedule(date: Optional[str] = None, user_id: Optional[int] = None
     # Выбираем расписание в зависимости от роли
     if role == "employee":
         mock_schedule = mock_schedule_employee
+    elif role == "teacher":
+        # Учителя видят свое расписание (пока используем те же данные)
+        mock_schedule = mock_schedule_employee
     else:
         mock_schedule = mock_schedule_student
+    
+    # Применяем фильтры (если указаны)
+    if education_level or direction or course or group:
+        filtered_schedule = []
+        for item in mock_schedule:
+            if education_level and item.get("education_level") != education_level:
+                continue
+            if direction and item.get("direction") != direction:
+                continue
+            if course and item.get("course") != course:
+                continue
+            if group and item.get("group") != group:
+                continue
+            filtered_schedule.append(item)
+        mock_schedule = filtered_schedule
     
     return {
         "schedule": mock_schedule,
@@ -828,42 +869,241 @@ async def get_courses(user_id: Optional[int] = None):
     
     return {"courses": mock_courses, "user_id": user_id}
 
+@app.get("/api/courses/{course_id}")
+async def get_course_details(course_id: int):
+    """
+    Получение детальной информации о курсе
+    """
+    # Моковые данные для деталей курса
+    mock_course_details = {
+        1: {
+            "id": 1,
+            "name": "Математический анализ",
+            "authors": "А.С. Глебов К.И. Иванов",
+            "description": "Курс по математическому анализу охватывает основы дифференциального и интегрального исчисления, теорию пределов, ряды и функции многих переменных. Изучите фундаментальные концепции математики, необходимые для дальнейшего изучения точных наук и инженерии.",
+            "weeks": [
+                {"id": 0, "title": "Введение", "subtitle": None, "isActive": False, "status": "past"},
+                {"id": 1, "title": "Неделя 1", "subtitle": "Пределы и непрерывность функций", "isActive": False, "status": "past"},
+                {"id": 2, "title": "Неделя 2", "subtitle": "Производная и дифференциал", "isActive": False, "status": "past"},
+                {"id": 3, "title": "Неделя 3", "subtitle": "Применение производных", "isActive": False, "status": "past"},
+                {"id": 4, "title": "Неделя 4", "subtitle": "Интегральное исчисление", "isActive": False, "status": "past"},
+                {"id": 5, "title": "Неделя 5", "subtitle": "Определенный интеграл", "isActive": True, "status": "active"},
+                {"id": 6, "title": "Неделя 6", "subtitle": "Ряды и их сходимость", "isActive": False, "status": "future"},
+                {"id": 7, "title": "Неделя 7", "subtitle": "Функции многих переменных", "isActive": False, "status": "future"},
+                {"id": 8, "title": "Неделя 8", "subtitle": "Кратные интегралы", "isActive": False, "status": "future"}
+            ]
+        },
+        2: {
+            "id": 2,
+            "name": "Программирование",
+            "authors": "И.В. Петров М.А. Сидоров",
+            "description": "Курс по основам программирования для начинающих. Изучите основные концепции программирования, работу с данными, алгоритмы и структуры данных. Научитесь писать чистый и эффективный код, решать практические задачи и понимать принципы разработки программного обеспечения.",
+            "weeks": [
+                {"id": 1, "title": "Неделя 1", "subtitle": "Введение в программирование", "isActive": False, "status": "past"},
+                {"id": 2, "title": "Неделя 2", "subtitle": "Переменные и типы данных", "isActive": False, "status": "past"},
+                {"id": 3, "title": "Неделя 3", "subtitle": "Условия и циклы", "isActive": True, "status": "active"},
+                {"id": 4, "title": "Неделя 4", "subtitle": "Функции и модули", "isActive": False, "status": "future"}
+            ]
+        },
+        3: {
+            "id": 3,
+            "name": "Базы данных",
+            "authors": "С.П. Козлов",
+            "description": "Изучение основ проектирования и работы с базами данных. Изучите SQL, нормализацию, индексы и оптимизацию запросов. Научитесь проектировать эффективные схемы баз данных и работать с реляционными СУБД.",
+            "weeks": [
+                {"id": 1, "title": "Неделя 1", "subtitle": "Введение в базы данных", "isActive": False, "status": "past"},
+                {"id": 2, "title": "Неделя 2", "subtitle": "SQL основы", "isActive": True, "status": "active"},
+                {"id": 3, "title": "Неделя 3", "subtitle": "Нормализация и проектирование", "isActive": False, "status": "future"}
+            ]
+        },
+        4: {
+            "id": 4,
+            "name": "Веб-разработка",
+            "authors": "А.М. Волков",
+            "description": "Современная веб-разработка: HTML, CSS, JavaScript, фреймворки и инструменты. Изучите создание интерактивных веб-приложений, работу с API, управление состоянием и современные подходы к разработке фронтенда и бэкенда.",
+            "weeks": [
+                {"id": 1, "title": "Неделя 1", "subtitle": "HTML и CSS", "isActive": False, "status": "past"},
+                {"id": 2, "title": "Неделя 2", "subtitle": "JavaScript основы", "isActive": False, "status": "past"},
+                {"id": 3, "title": "Неделя 3", "subtitle": "React и современные фреймворки", "isActive": True, "status": "active"}
+            ]
+        }
+    }
+    
+    course = mock_course_details.get(course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    
+    return course
+
 @app.get("/api/events")
-async def get_events():
+async def get_events(university_id: Optional[int] = None):
     """
     Получение списка событий университета
     """
+    # Получаем название университета
+    university_name = "Российская академия народного хозяйства"
+    if university_id:
+        import sqlite3
+        conn = sqlite3.connect(database.UNIVERSITIES_DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM universities WHERE id = ?", (university_id,))
+        row = cursor.fetchone()
+        if row:
+            university_name = row["name"]
+        conn.close()
+    
     mock_events = [
         {
-            "id": 1,
+            "id": 2,
+            "name": "Открытая лекция по AI и машинному обучению",
             "title": "Открытая лекция по AI",
-            "date": "2025-11-15",
+            "date": "2025-11-20T18:00:00",
             "time": "18:00",
-            "location": "Аудитория 100",
-            "participants": 25
+            "location": f"{university_name}, Актовый зал",
+            "description": "Встреча с ведущими экспертами в области искусственного интеллекта. Обсуждение последних трендов и практических применений AI.",
+            "organizer": "Факультет информатики",
+            "participants": 200,
+            "images": []
         },
         {
-            "id": 2,
+            "id": 3,
+            "name": "Карьерный форум 2025",
             "title": "Карьерный форум",
-            "date": "2025-11-20",
-            "time": "10:00",
-            "location": "Актовый зал",
-            "participants": 150
+            "date": "2025-11-25T09:00:00",
+            "time": "09:00",
+            "location": f"{university_name}, Конференц-зал",
+            "description": "Встреча с работодателями, мастер-классы по составлению резюме и прохождению собеседований. Более 50 компаний-участников.",
+            "organizer": "Центр карьеры",
+            "participants": 500,
+            "images": []
         }
     ]
     
     return {"events": mock_events}
 
 @app.post("/api/events/{event_id}/register")
-async def register_for_event(event_id: int, user_id: Optional[int] = None):
+async def register_for_event(
+    event_id: int, 
+    user_id: Optional[int] = Header(None, alias="X-MAX-User-ID")
+):
     """
     Регистрация на событие
     """
+    if not user_id:
+        # В мок-режиме разрешаем регистрацию без user_id
+        user_id = 10001  # Дефолтный тестовый ID
+    
+    # Сохраняем регистрацию в БД
+    success = database.register_for_event(event_id, user_id)
+    
+    if not success:
+        raise HTTPException(status_code=400, detail="Already registered for this event")
+    
     return {
         "status": "registered",
         "event_id": event_id,
-        "user_id": user_id or 12345,
+        "user_id": user_id,
         "message": "Successfully registered for event"
+    }
+
+@app.get("/api/events/my-registrations")
+async def get_user_registrations(user_id: Optional[int] = Header(None, alias="X-MAX-User-ID")):
+    """
+    Получение списка зарегистрированных событий пользователя
+    """
+    if not user_id:
+        # В мок-режиме используем дефолтный ID
+        user_id = 10001
+    
+    event_ids = database.get_user_event_registrations(user_id)
+    return {"event_ids": event_ids}
+
+class EventCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    date: str
+    location: Optional[str] = None
+    organizer: Optional[str] = None
+    university_id: int
+    images: Optional[List[str]] = []
+
+@app.post("/api/admin/events")
+async def create_event(
+    event_data: EventCreate,
+    user_id: Optional[int] = Header(None, alias="X-MAX-User-ID")
+):
+    """
+    Создание нового мероприятия (только для админов)
+    """
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User ID required")
+    
+    user = database.get_user(user_id)
+    if not user or user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only university admins can create events")
+    
+    # TODO: Сохранить в БД
+    # Пока возвращаем успешный ответ
+    return {
+        "success": True,
+        "event_id": 999,  # Временный ID
+        "message": "Event created successfully"
+    }
+
+class ScheduleItemCreate(BaseModel):
+    time_start: str
+    time_end: Optional[str] = None
+    subject: str
+    room: Optional[str] = None
+    teacher: Optional[str] = None
+    type: Optional[str] = "Лекция"
+    education_level: Optional[str] = None
+    direction: Optional[str] = None
+    course: Optional[str] = None
+    group: Optional[str] = None
+
+@app.post("/api/admin/schedule")
+async def create_schedule_item(
+    schedule_data: ScheduleItemCreate,
+    user_id: Optional[int] = Header(None, alias="X-MAX-User-ID")
+):
+    """
+    Создание нового занятия в расписании (только для админов)
+    """
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User ID required")
+    
+    user = database.get_user(user_id)
+    if not user or user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only university admins can create schedule items")
+    
+    # TODO: Сохранить в БД
+    return {
+        "success": True,
+        "schedule_id": 999,
+        "message": "Schedule item created successfully"
+    }
+
+@app.delete("/api/admin/schedule/{item_id}")
+async def delete_schedule_item(
+    item_id: int,
+    user_id: Optional[int] = Header(None, alias="X-MAX-User-ID")
+):
+    """
+    Удаление занятия из расписания (только для админов)
+    """
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User ID required")
+    
+    user = database.get_user(user_id)
+    if not user or user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only university admins can delete schedule items")
+    
+    # TODO: Удалить из БД
+    return {
+        "success": True,
+        "message": "Schedule item deleted successfully"
     }
 
 @app.get("/api/news")

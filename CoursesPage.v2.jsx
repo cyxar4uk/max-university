@@ -70,7 +70,11 @@ const CoursesPage = () => {
               <p className="card-text">📝 Заданий: {course.assignments}</p>
               <p className="card-text">📅 Следующее занятие: {course.next_class}</p>
               
-              <button className="btn btn-primary" style={{ marginTop: '12px' }}>
+              <button 
+                className="btn btn-primary" 
+                style={{ marginTop: '12px' }}
+                onClick={() => navigate(`/courses/${course.id}`)}
+              >
                 Открыть курс
               </button>
             </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiService from './api-service';
+import BackendWarning from './components/BackendWarning.jsx';
 
 const roles = ['student', 'applicant', 'employee', 'admin'];
 const roleNames = {
@@ -32,6 +33,7 @@ const AdminPage = () => {
 
   return (
     <div className="page">
+      <BackendWarning />
       <div className="page-header">
         <button 
           onClick={() => navigate('/home')}
@@ -70,6 +72,22 @@ const AdminPage = () => {
         <div className="card card-clickable" onClick={() => navigate('/admin/invitation-codes')}>
           <h3 className="card-title">🎫 Управление кодами</h3>
           <p className="card-text">Генерация и импорт кодов приглашения</p>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '24px' }}>
+        <h2 style={{ marginBottom: '16px', fontSize: '18px' }}>Расписание</h2>
+        <div className="card card-clickable" onClick={() => navigate('/admin/schedule')}>
+          <h3 className="card-title">📅 Управление расписанием</h3>
+          <p className="card-text">Редактирование расписания с фильтрами</p>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '24px' }}>
+        <h2 style={{ marginBottom: '16px', fontSize: '18px' }}>Мероприятия</h2>
+        <div className="card card-clickable" onClick={() => navigate('/admin/events')}>
+          <h3 className="card-title">🎉 Управление мероприятиями</h3>
+          <p className="card-text">Создание и редактирование мероприятий</p>
         </div>
       </div>
 

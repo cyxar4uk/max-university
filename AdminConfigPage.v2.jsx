@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import apiService from './api-service';
+import BackendWarning from './components/BackendWarning.jsx';
 
 // Компонент для drag & drop блоков
 const DraggableBlock = ({ block, index, onDragStart, onDragOver, onDrop, onDelete }) => {
@@ -271,6 +272,7 @@ const AdminConfigPage = () => {
 
   return (
     <div className="page">
+      <BackendWarning />
       <div className="page-header" style={{ background: headerColor, color: 'white' }}>
         <button 
           onClick={() => navigate('/admin')}

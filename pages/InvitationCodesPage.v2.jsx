@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import apiService from '../api-service';
+import BackendWarning from '../components/BackendWarning.jsx';
 
 const InvitationCodesPage = () => {
   const navigate = useNavigate();
@@ -148,6 +149,7 @@ const InvitationCodesPage = () => {
 
   return (
     <div className="page">
+      <BackendWarning />
       <div className="page-header">
         <button 
           onClick={() => navigate('/admin')}

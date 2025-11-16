@@ -12,11 +12,14 @@ import HomePage from './HomePage.v2.jsx';
 import ProfilePage from './ProfilePage.v2.jsx';
 import SchedulePage from './SchedulePage.v2.jsx';
 import CoursesPage from './CoursesPage.v2.jsx';
+import CoursePage from './CoursePage.v2.jsx';
 import AdminPage from './AdminPage.v2.jsx';
 import AdminConfigPage from './AdminConfigPage.v2.jsx';
 import CustomBlocksPage from './pages/CustomBlocksPage.v2.jsx';
 import InvitationCodesPage from './pages/InvitationCodesPage.v2.jsx';
 import SuperAdminPage from './pages/SuperAdminPage.v2.jsx';
+import AdminEventsPage from './pages/AdminEventsPage.v2.jsx';
+import AdminSchedulePage from './pages/AdminSchedulePage.v2.jsx';
 import ServicesPage from './ServicesPage.v2.jsx';
 import EventsPage from './EventsPage.v2.jsx';
 import NewsPage from './NewsPage.v2.jsx';
@@ -71,11 +74,14 @@ function App() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/schedule" element={<SchedulePage />} />
           <Route path="/courses" element={<CoursesPage />} />
+          <Route path="/courses/:id" element={<CoursePage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/admin/config/:role" element={<AdminConfigPage />} />
-          <Route path="/admin/custom-blocks" element={<CustomBlocksPage />} />
-          <Route path="/admin/invitation-codes" element={<InvitationCodesPage />} />
-          <Route path="/superadmin" element={<SuperAdminPage />} />
+                  <Route path="/admin/custom-blocks" element={<CustomBlocksPage />} />
+                  <Route path="/admin/invitation-codes" element={<InvitationCodesPage />} />
+                  <Route path="/admin/events" element={<AdminEventsPage />} />
+                  <Route path="/admin/schedule" element={<AdminSchedulePage />} />
+                  <Route path="/superadmin" element={<SuperAdminPage />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/news" element={<NewsPage />} />

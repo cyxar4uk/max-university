@@ -30,6 +30,16 @@ export const mockUsers = {
     role: 'employee',
     university_id: 1
   },
+  teacher: {
+    id: 10005,
+    first_name: 'Елена',
+    last_name: 'Наумова',
+    username: 'elena_teacher',
+    photo_url: null,
+    language_code: 'ru',
+    role: 'teacher',
+    university_id: 1
+  },
   admin: {
     id: 10004,
     first_name: 'Анна',

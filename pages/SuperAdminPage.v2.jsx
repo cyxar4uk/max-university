@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiService from '../api-service';
+import BackendWarning from '../components/BackendWarning.jsx';
 
 const SuperAdminPage = () => {
   const navigate = useNavigate();
@@ -68,6 +69,7 @@ const SuperAdminPage = () => {
 
   return (
     <div className="page">
+      <BackendWarning />
       <div className="page-header">
         <button 
           onClick={() => navigate('/admin')}

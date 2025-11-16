@@ -20,9 +20,20 @@ class UniversityAPIService {
 
     // Интерцептор для добавления информации MAX Bridge в заголовки
     this.client.interceptors.request.use((config) => {
-      // Получаем ID пользователя из MAX Bridge
+      // Получаем ID пользователя из MAX Bridge или localStorage
+      let userId = null;
       if (window.WebApp?.initDataUnsafe?.user) {
-        config.headers['X-MAX-User-ID'] = window.WebApp.initDataUnsafe.user.id;
+        userId = window.WebApp.initDataUnsafe.user.id;
+      } else {
+        // Fallback для мок-режима: берем из localStorage
+        const storedUserId = localStorage.getItem('maxUserId');
+        if (storedUserId) {
+          userId = parseInt(storedUserId);
+        }
+      }
+      
+      if (userId) {
+        config.headers['X-MAX-User-ID'] = userId;
       }
       
       // Добавляем init data для валидации на бэкенде
@@ -236,11 +247,10 @@ class UniversityAPIService {
   }
 
   // Получение расписания
-  async getSchedule(date = null) {
+  async getSchedule(date = null, filters = {}) {
     try {
-      const response = await this.client.get('/schedule', {
-        params: { date },
-      });
+      const params = { date, ...filters };
+      const response = await this.client.get('/schedule', { params });
       return response.data;
     } catch (error) {
       console.error('Get schedule error:', error);
@@ -249,10 +259,39 @@ class UniversityAPIService {
         schedule: [
           {
             id: 1,
-            time: "09:00-10:30",
-            subject: "Математический анализ",
-            room: "Аудитория 401",
-            teacher: "Иванов И.И.",
+            time: "14:00 - 14:30",
+            time_start: "14:00",
+            time_end: "14:30",
+            subject: "Введение в экономику",
+            room: "B0308",
+            location: "B0308",
+            teacher: "Елена Наумова",
+            type: "Семинар",
+            indicator: "H",
+            indicator_type: "homework"
+          },
+          {
+            id: 2,
+            time: "15:50 - 17:10",
+            time_start: "15:50",
+            time_end: "17:10",
+            subject: "Основы Go",
+            room: "B0401",
+            location: "B0401",
+            teacher: "Крутой препод",
+            type: "Семинар",
+            indicator: "10",
+            indicator_type: "minutes"
+          },
+          {
+            id: 3,
+            time: "18:00 - 19:30",
+            time_start: "18:00",
+            time_end: "19:30",
+            subject: "Матан, Ю1.2",
+            room: "Байкал",
+            location: "Байкал",
+            teacher: "Крутой препод",
             type: "Лекция"
           }
         ],
@@ -298,7 +337,62 @@ class UniversityAPIService {
       return response.data;
     } catch (error) {
       console.error('Get course details error:', error);
-      throw error;
+      // Возвращаем мок-данные при ошибке
+      const mockCourses = {
+        1: {
+          id: 1,
+          name: "Математический анализ",
+          authors: "А.С. Глебов К.И. Иванов",
+          description: "Курс по математическому анализу охватывает основы дифференциального и интегрального исчисления, теорию пределов, ряды и функции многих переменных. Изучите фундаментальные концепции математики, необходимые для дальнейшего изучения точных наук и инженерии.",
+          weeks: [
+            { id: 0, title: "Введение", subtitle: null, isActive: false, status: "past" },
+            { id: 1, title: "Неделя 1", subtitle: "Пределы и непрерывность функций", isActive: false, status: "past" },
+            { id: 2, title: "Неделя 2", subtitle: "Производная и дифференциал", isActive: false, status: "past" },
+            { id: 3, title: "Неделя 3", subtitle: "Применение производных", isActive: false, status: "past" },
+            { id: 4, title: "Неделя 4", subtitle: "Интегральное исчисление", isActive: false, status: "past" },
+            { id: 5, title: "Неделя 5", subtitle: "Определенный интеграл", isActive: true, status: "active" },
+            { id: 6, title: "Неделя 6", subtitle: "Ряды и их сходимость", isActive: false, status: "future" },
+            { id: 7, title: "Неделя 7", subtitle: "Функции многих переменных", isActive: false, status: "future" },
+            { id: 8, title: "Неделя 8", subtitle: "Кратные интегралы", isActive: false, status: "future" }
+          ]
+        },
+        2: {
+          id: 2,
+          name: "Программирование",
+          authors: "И.В. Петров М.А. Сидоров",
+          description: "Курс по основам программирования для начинающих. Изучите основные концепции программирования, работу с данными, алгоритмы и структуры данных. Научитесь писать чистый и эффективный код, решать практические задачи и понимать принципы разработки программного обеспечения.",
+          weeks: [
+            { id: 1, title: "Неделя 1", subtitle: "Введение в программирование", isActive: false, status: "past" },
+            { id: 2, title: "Неделя 2", subtitle: "Переменные и типы данных", isActive: false, status: "past" },
+            { id: 3, title: "Неделя 3", subtitle: "Условия и циклы", isActive: true, status: "active" },
+            { id: 4, title: "Неделя 4", subtitle: "Функции и модули", isActive: false, status: "future" }
+          ]
+        },
+        3: {
+          id: 3,
+          name: "Базы данных",
+          authors: "С.П. Козлов",
+          description: "Изучение основ проектирования и работы с базами данных. Изучите SQL, нормализацию, индексы и оптимизацию запросов. Научитесь проектировать эффективные схемы баз данных и работать с реляционными СУБД.",
+          weeks: [
+            { id: 1, title: "Неделя 1", subtitle: "Введение в базы данных", isActive: false, status: "past" },
+            { id: 2, title: "Неделя 2", subtitle: "SQL основы", isActive: true, status: "active" },
+            { id: 3, title: "Неделя 3", subtitle: "Нормализация и проектирование", isActive: false, status: "future" }
+          ]
+        },
+        4: {
+          id: 4,
+          name: "Веб-разработка",
+          authors: "А.М. Волков",
+          description: "Современная веб-разработка: HTML, CSS, JavaScript, фреймворки и инструменты. Изучите создание интерактивных веб-приложений, работу с API, управление состоянием и современные подходы к разработке фронтенда и бэкенда.",
+          weeks: [
+            { id: 1, title: "Неделя 1", subtitle: "HTML и CSS", isActive: false, status: "past" },
+            { id: 2, title: "Неделя 2", subtitle: "JavaScript основы", isActive: false, status: "past" },
+            { id: 3, title: "Неделя 3", subtitle: "React и современные фреймворки", isActive: true, status: "active" }
+          ]
+        }
+      };
+      
+      return mockCourses[courseId] || mockCourses[1];
     }
   }
 
@@ -347,22 +441,52 @@ class UniversityAPIService {
   }
 
   // Получение событий
-  async getEvents() {
+  async getEvents(universityId = null) {
     try {
-      const response = await this.client.get('/events');
+      const params = universityId ? { university_id: universityId } : {};
+      const response = await this.client.get('/events', { params });
       return response.data;
     } catch (error) {
       console.error('Get events error:', error);
+      // Получаем название университета для мок-данных
+      let universityName = 'Российская академия народного хозяйства';
+      if (universityId) {
+        try {
+          const uniData = await this.getUniversity(universityId);
+          if (uniData.name) {
+            universityName = uniData.name;
+          }
+        } catch (e) {
+          console.warn('Could not get university name for mock data');
+        }
+      }
+      
       // Возвращаем мок-данные при ошибке
       return {
         events: [
           {
-            id: 1,
+            id: 2,
+            name: "Открытая лекция по AI и машинному обучению",
             title: "Открытая лекция по AI",
-            date: "2025-11-15",
+            date: "2025-11-20T18:00:00",
             time: "18:00",
-            location: "Аудитория 100",
-            participants: 25
+            location: `${universityName}, Актовый зал`,
+            description: "Встреча с ведущими экспертами в области искусственного интеллекта. Обсуждение последних трендов и практических применений AI.",
+            organizer: "Факультет информатики",
+            participants: 200,
+            images: []
+          },
+          {
+            id: 3,
+            name: "Карьерный форум 2025",
+            title: "Карьерный форум",
+            date: "2025-11-25T09:00:00",
+            time: "09:00",
+            location: `${universityName}, Конференц-зал`,
+            description: "Встреча с работодателями, мастер-классы по составлению резюме и прохождению собеседований. Более 50 компаний-участников.",
+            organizer: "Центр карьеры",
+            participants: 500,
+            images: []
           }
         ]
       };
@@ -376,6 +500,34 @@ class UniversityAPIService {
       return response.data;
     } catch (error) {
       console.error('Register for event error:', error);
+      // Мок для демонстрации
+      return {
+        status: 'registered',
+        event_id: eventId,
+        message: 'Successfully registered (mock)'
+      };
+    }
+  }
+
+  // Получение списка зарегистрированных событий пользователя
+  async getUserEventRegistrations() {
+    try {
+      const response = await this.client.get('/events/my-registrations');
+      return response.data;
+    } catch (error) {
+      console.error('Get user registrations error:', error);
+      // Мок для демонстрации
+      return { event_ids: [] };
+    }
+  }
+
+  // Создание нового мероприятия (для админов)
+  async createEvent(eventData) {
+    try {
+      const response = await this.client.post('/admin/events', eventData);
+      return response.data;
+    } catch (error) {
+      console.error('Create event error:', error);
       throw error;
     }
   }

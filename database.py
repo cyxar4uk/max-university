@@ -23,6 +23,7 @@ def init_databases():
     init_users_db()
     init_universities_db()
     init_config_db()
+    init_events_db()
 
 
 def init_users_db():
@@ -95,6 +96,18 @@ def init_universities_db():
         )
     """)
     
+    # Таблица регистраций на мероприятия
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS event_registrations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,  -- max_user_id из таблицы users
+            registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(event_id, user_id),
+            FOREIGN KEY (user_id) REFERENCES users(max_user_id)
+        )
+    """)
+    
     # Добавляем дефолтный университет если его нет
     cursor.execute("SELECT COUNT(*) FROM universities WHERE id = 1")
     if cursor.fetchone()[0] == 0:
@@ -103,6 +116,45 @@ def init_universities_db():
             VALUES (1, 'Российская академия народного хозяйства', 'РАНХиГС', 
                     'Федеральное государственное бюджетное образовательное учреждение высшего образования')
         """)
+    
+    conn.commit()
+    conn.close()
+
+
+def init_events_db():
+    """Инициализация базы данных мероприятий и регистраций"""
+    conn = sqlite3.connect(UNIVERSITIES_DB_PATH)
+    cursor = conn.cursor()
+    
+    # Таблица мероприятий
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT,
+            date TEXT NOT NULL,
+            location TEXT,
+            organizer TEXT,
+            university_id INTEGER NOT NULL,
+            created_by_user_id INTEGER,  -- ID админа, создавшего мероприятие
+            images TEXT,  -- JSON массив URL изображений
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (university_id) REFERENCES universities(id),
+            FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+        )
+    """)
+    
+    # Таблица регистраций на мероприятия
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS event_registrations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,  -- max_user_id из таблицы users
+            registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(event_id, user_id),
+            FOREIGN KEY (event_id) REFERENCES events(id)
+        )
+    """)
     
     conn.commit()
     conn.close()
@@ -204,6 +256,12 @@ def init_default_config(cursor):
             "header_color": "#0088CC"
         },
         "employee": {
+            "sections": [
+                {"name": "Главное", "blocks": ["schedule", "services", "news"]},
+            ],
+            "header_color": "#0088CC"
+        },
+        "teacher": {
             "sections": [
                 {"name": "Главное", "blocks": ["schedule", "services", "news"]},
             ],
@@ -637,3 +695,41 @@ def get_custom_block_by_id(block_id: int) -> Optional[Dict]:
                 block["config_schema"] = {}
         return block
     return None
+
+
+# ============ ФУНКЦИИ ДЛЯ РАБОТЫ С МЕРОПРИЯТИЯМИ И РЕГИСТРАЦИЯМИ ============
+
+def register_for_event(event_id: int, user_id: int) -> bool:
+    """Зарегистрировать пользователя на мероприятие"""
+    conn = sqlite3.connect(UNIVERSITIES_DB_PATH)
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("""
+            INSERT INTO event_registrations (event_id, user_id)
+            VALUES (?, ?)
+        """, (event_id, user_id))
+        conn.commit()
+        conn.close()
+        return True
+    except sqlite3.IntegrityError:
+        # Уже зарегистрирован
+        conn.close()
+        return False
+
+
+def get_user_event_registrations(user_id: int) -> List[int]:
+    """Получить список ID мероприятий, на которые зарегистрирован пользователь"""
+    conn = sqlite3.connect(UNIVERSITIES_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT event_id FROM event_registrations
+        WHERE user_id = ?
+    """, (user_id,))
+    
+    event_ids = [row["event_id"] for row in cursor.fetchall()]
+    conn.close()
+    
+    return event_ids

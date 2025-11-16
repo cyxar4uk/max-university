@@ -74,6 +74,12 @@ const UserSwitcher = () => {
             👔 Сотрудник (Петр)
           </button>
           <button 
+            className={`user-switcher-btn ${currentUser?.role === 'teacher' ? 'active' : ''}`}
+            onClick={() => switchUser('teacher')}
+          >
+            👨‍🏫 Учитель (Елена)
+          </button>
+          <button 
             className={`user-switcher-btn ${currentUser?.role === 'admin' ? 'active' : ''}`}
             onClick={() => switchUser('admin')}
           >
