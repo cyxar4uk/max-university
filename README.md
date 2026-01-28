@@ -104,13 +104,14 @@ https://disk.360.yandex.ru/i/j2c98mCab9eA2w
 #### 1. Установка зависимостей фронтенда
 
 ```bash
+cd frontend
 npm install
 ```
 
 #### 2. Установка зависимостей бэкенда
 
 ```bash
-# Создание виртуального окружения
+# Создание виртуального окружения (в корне проекта)
 python -m venv venv
 
 # Активация виртуального окружения
@@ -120,7 +121,7 @@ venv\Scripts\activate
 source venv/bin/activate
 
 # Установка зависимостей
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
 ```
 
 #### 3. Инициализация базы данных
@@ -141,6 +142,7 @@ venv\Scripts\activate  # Windows
 source venv/bin/activate  # Linux/Mac
 
 # Запуск сервера
+cd backend
 python main.py
 ```
 
@@ -153,6 +155,7 @@ API документация: http://localhost:8000/docs
 В другом терминале:
 
 ```bash
+cd frontend
 npm run dev
 ```
 
@@ -189,7 +192,7 @@ docker-compose down
 
 **Как протестировать**:
 - Приложение полностью функционально в браузере по адресу: https://cyxar4uk.github.io/max-university/
-- Весь код для работы с MAX Bridge находится в useMAXBridge.v2.js
+- Весь код для работы с MAX Bridge находится в frontend/src/useMAXBridge.js
 - Мок MAX Bridge инициализируется автоматически в index.html для браузерного тестирования
 - После получения токена достаточно обновить MAX_BOT_TOKEN в main.py и настроить вебхук
 
@@ -272,59 +275,80 @@ GitHub Pages (https://cyxar4uk.github.io/max-university/):
 
 ```
 max-university/
-├── main.py                      # FastAPI бэкенд сервер с MAX Bot API
-├── database.py                  # Модуль работы с SQLite базами данных
+├── backend/                     # Бэкенд (FastAPI)
+│   ├── main.py                 # FastAPI сервер с MAX Bot API
+│   ├── database.py             # Модуль работы с SQLite базами данных
+│   ├── requirements.txt        # Зависимости Python
+│   └── Dockerfile              # Dockerfile для бэкенда
+├── frontend/                    # Фронтенд (React + Vite)
+│   ├── src/                    # Исходный код
+│   │   ├── App.jsx             # Главный компонент React с роутингом
+│   │   ├── main.jsx            # Инициализация React приложения
+│   │   ├── store.js            # Redux store
+│   │   ├── userSlice.js        # Redux slice для пользователя
+│   │   ├── api-service.js      # Сервис для работы с API и мок-режим
+│   │   ├── useMAXBridge.js     # Хук для работы с MAX Bridge
+│   │   ├── mockUsers.js        # Тестовые пользователи
+│   │   ├── UserSwitcher.jsx    # Переключатель тестовых пользователей
+│   │   ├── styles.css          # Собственные стили без внешних библиотек
+│   │   ├── pages/              # Страницы приложения
+│   │   │   ├── HomePage.jsx    # Главная страница с виджетами
+│   │   │   ├── WelcomePage.jsx # Страница входа с кодом приглашения
+│   │   │   ├── ProfilePage.jsx # Страница профиля
+│   │   │   ├── AdminPage.jsx   # Панель администратора
+│   │   │   ├── AdminConfigPage.jsx # Настройка интерфейса
+│   │   │   ├── CustomBlocksPage.jsx # Кастомные виджеты
+│   │   │   ├── InvitationCodesPage.jsx # Коды приглашения
+│   │   │   ├── SuperAdminPage.jsx # Панель суперадмина
+│   │   │   ├── SchedulePage.jsx # Расписание
+│   │   │   ├── CoursesPage.jsx # Курсы
+│   │   │   ├── CoursePage.jsx  # Детали курса
+│   │   │   ├── EventsPage.jsx  # События
+│   │   │   ├── NewsPage.jsx    # Новости
+│   │   │   ├── ServicesPage.jsx # Услуги
+│   │   │   ├── PaymentPage.jsx # Оплата
+│   │   │   ├── AdmissionPage.jsx # Поступление
+│   │   │   ├── AdmissionLevelPage.jsx # Выбор уровня образования
+│   │   │   ├── AdmissionDirectionsPage.jsx # Выбор направления
+│   │   │   ├── AdmissionApplyPage.jsx # Форма подачи заявления
+│   │   │   ├── AdmissionMyApplicationsPage.jsx # Мои заявления
+│   │   │   ├── AdminApplicationsPage.jsx # Проверка заявлений (админ)
+│   │   │   ├── AdminEventsPage.jsx # Управление мероприятиями
+│   │   │   └── AdminSchedulePage.jsx # Управление расписанием
+│   │   ├── components/         # Компоненты
+│   │   │   ├── MockModeNotification.jsx # Уведомление о мок-режиме
+│   │   │   └── BackendWarning.jsx # Предупреждение о бэкенде
+│   │   ├── Widgets/            # Виджеты для блоков
+│   │   │   ├── BlockWidget.jsx # Роутер виджетов
+│   │   │   ├── ScheduleWidget.jsx # Расписание
+│   │   │   ├── NewsWidget.jsx  # Новости с каруселью
+│   │   │   ├── ServicesWidget.jsx # Услуги
+│   │   │   ├── CoursesWidget.jsx # Курсы
+│   │   │   ├── EventsWidget.jsx # События
+│   │   │   ├── PaymentWidget.jsx # Оплата
+│   │   │   ├── AdmissionWidget.jsx # Поступление
+│   │   │   ├── AnalyticsWidget.jsx # Аналитика
+│   │   │   └── DigitalPassWidget.jsx # Цифровой пропуск с QR
+│   │   └── utils/              # Утилиты
+│   │       └── errorLogger.js  # Логирование ошибок
+│   ├── public/                 # Статические файлы
+│   │   └── 404.html           # Страница 404 для GitHub Pages
+│   ├── index.html              # Entry point с мок MAX Bridge
+│   ├── vite.config.js          # Конфигурация Vite
+│   ├── package.json            # Зависимости Node.js
+│   ├── package-lock.json       # Lock файл npm
+│   ├── Dockerfile.frontend     # Dockerfile для фронтенда
+│   └── nginx.conf              # Конфигурация nginx
+├── docs/                        # Документация
+│   ├── ARCHITECTURE.md         # Архитектура проекта
+│   ├── DEPLOY.md               # Инструкции по деплою
+│   ├── PRESENTATION_GUIDE.md   # Руководство по презентации
+│   └── ...                     # Другие документы
 ├── data/                        # Папка с файлами .db (создается автоматически)
-│   ├── users.db                # База данных пользователей и суперадминов
-│   ├── universities.db         # База данных университетов и кодов приглашения
-│   └── config.db               # База данных конфигураций и кастомных блоков
-├── App.v2.jsx                   # Главный компонент React с роутингом
-├── HomePage.v2.jsx              # Главная страница с виджетами
-├── WelcomePage.v2.jsx           # Страница входа с кодом приглашения
-├── ProfilePage.v2.jsx           # Страница профиля с переключателем пользователей
-├── AdminPage.v2.jsx             # Панель администратора университета
-├── AdminConfigPage.v2.jsx      # Настройка интерфейса (разделы, блоки, drag&drop)
-├── pages/
-│   ├── CustomBlocksPage.v2.jsx # Отправка кастомных виджетов на модерацию
-│   ├── InvitationCodesPage.v2.jsx # Управление кодами приглашения
-│   └── SuperAdminPage.v2.jsx   # Панель суперадмина
-├── Widgets/                     # Виджеты для блоков
-│   ├── BlockWidget.jsx         # Роутер виджетов
-│   ├── ScheduleWidget.jsx      # Виджет расписания
-│   ├── NewsWidget.jsx          # Виджет новостей с каруселью
-│   ├── ServicesWidget.jsx      # Виджет услуг
-│   ├── CoursesWidget.jsx       # Виджет курсов
-│   ├── EventsWidget.jsx        # Виджет событий
-│   ├── PaymentWidget.jsx       # Виджет оплаты
-│   ├── AdmissionWidget.jsx     # Виджет поступления
-│   ├── AnalyticsWidget.jsx     # Виджет аналитики
-│   └── DigitalPassWidget.jsx   # Цифровой пропуск с QR-кодом
-├── components/
-│   └── MockModeNotification.jsx # Уведомление о работе в мок-режиме
-├── utils/
-│   └── errorLogger.js          # Логирование ошибок для отладки
-├── SchedulePage.v2.jsx          # Детальная страница расписания
-├── CoursesPage.v2.jsx           # Детальная страница курсов
-├── EventsPage.v2.jsx            # События
-├── NewsPage.v2.jsx              # Новости
-├── ServicesPage.v2.jsx          # Электронные услуги
-├── PaymentPage.v2.jsx           # Оплата
-├── AdmissionPage.v2.jsx         # Поступление
-├── UserSwitcher.jsx             # Переключатель тестовых пользователей
-├── mockUsers.js                 # Тестовые пользователи
-├── useMAXBridge.v2.js           # Хук для работы с MAX Bridge
-├── userSlice.js                 # Redux slice для пользователя
-├── store.js                     # Redux store
-├── api-service.js               # Сервис для работы с API и мок-режим
-├── styles.css                   # Собственные стили без внешних библиотек
-├── Dockerfile                   # Dockerfile для бэкенда
-├── Dockerfile.frontend          # Dockerfile для фронтенда
 ├── docker-compose.yml           # Docker Compose конфигурация
-├── package.json                 # Зависимости Node.js
-├── requirements.txt             # Зависимости Python
-├── vite.config.js               # Конфигурация Vite
-├── index.html                   # Entry point с мок MAX Bridge
-├── main.jsx                     # Инициализация React приложения
+├── .github/workflows/deploy.yml # GitHub Actions для деплоя
+├── .gitignore                   # Git ignore файл
+├── .nojekyll                    # Отключение Jekyll на GitHub Pages
 └── README.md                    # Этот файл
 ```
 

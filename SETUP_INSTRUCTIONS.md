@@ -41,13 +41,13 @@ git push -u origin main
 - Перейдите в `Actions` → дождитесь завершения workflow
 - Ваша ссылка: `https://YOUR_USERNAME.github.io/max-university/`
 
-### 5. Обновите URL в main.py
+### 5. Обновите URL в main.py (если нужно)
 
-Замените `YOUR_USERNAME` на ваш GitHub username во всех местах в `main.py`:
+URL уже обновлены с `cyxar4uk`. Если ваш username другой, замените во всех местах в `main.py`:
 
 ```python
 # Найдите и замените:
-"https://YOUR_USERNAME.github.io/max-university/?role=student"
+"https://cyxar4uk.github.io/max-university/?role=student"
 # на:
 "https://ваш_username.github.io/max-university/?role=student"
 ```
@@ -55,8 +55,8 @@ git push -u origin main
 ### 6. Закоммитьте изменения
 
 ```bash
-git add main.py
-git commit -m "Update URLs with GitHub username"
+git add .
+git commit -m "Update project configuration"
 git push
 ```
 
