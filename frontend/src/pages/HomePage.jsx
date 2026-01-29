@@ -15,7 +15,6 @@ const HomePage = () => {
   const [headerColor, setHeaderColor] = useState('#0088CC');
   const [loading, setLoading] = useState(true);
   const [activeSectionIndex, setActiveSectionIndex] = useState(0);
-  const [activeNavTab, setActiveNavTab] = useState('main');
   const [showDigitalPass, setShowDigitalPass] = useState(false);
 
   useEffect(() => {
@@ -134,21 +133,6 @@ const HomePage = () => {
     navigate('/profile');
   };
 
-  const handleNavClick = (tab) => {
-    setActiveNavTab(tab);
-    if (tab === 'main') {
-      setActiveSectionIndex(0);
-    } else if (tab === 'section1') {
-      if (sections.length > 0) {
-        setActiveSectionIndex(0);
-      }
-    } else if (tab === 'section2') {
-      if (sections.length > 1) {
-        setActiveSectionIndex(1);
-      }
-    }
-  };
-
   if (loading) {
     return (
       <div className="page-container">
@@ -198,44 +182,6 @@ const HomePage = () => {
           </div>
         )}
       </main>
-
-      {/* Навигационное меню внизу */}
-      <nav className="bottom-nav">
-        <button 
-          className={`nav-item ${activeNavTab === 'main' ? 'active' : ''}`}
-          onClick={() => handleNavClick('main')}
-        >
-          <span className="nav-icon">🏠</span>
-          <span className="nav-label">Главное</span>
-        </button>
-        {sections.length > 1 && (
-          <button 
-            className={`nav-item ${activeNavTab === 'section1' ? 'active' : ''}`}
-            onClick={() => handleNavClick('section1')}
-          >
-            <span className="nav-icon">📋</span>
-            <span className="nav-label">{sections[0]?.name || 'Раздел 1'}</span>
-          </button>
-        )}
-        {sections.length > 2 && (
-          <button 
-            className={`nav-item ${activeNavTab === 'section2' ? 'active' : ''}`}
-            onClick={() => handleNavClick('section2')}
-          >
-            <span className="nav-icon">📄</span>
-            <span className="nav-label">{sections[1]?.name || 'Раздел 2'}</span>
-          </button>
-        )}
-        {user.role === 'admin' && (
-          <button 
-            className={`nav-item ${activeNavTab === 'admin' ? 'active' : ''}`}
-            onClick={() => navigate('/admin')}
-          >
-            <span className="nav-icon">⚙️</span>
-            <span className="nav-label">Админ</span>
-          </button>
-        )}
-      </nav>
 
       {/* Модальное окно цифрового пропуска */}
       {showDigitalPass && (

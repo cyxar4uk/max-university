@@ -6,9 +6,12 @@ import './styles.css';
 import apiService from './api-service.js';
 import MockModeNotification from './components/MockModeNotification.jsx';
 
+// Layout
+import MainLayout from './components/MainLayout.jsx';
 // Pages
 import WelcomePage from './pages/WelcomePage.jsx';
 import HomePage from './pages/HomePage.jsx';
+import HubPage from './pages/HubPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import SchedulePage from './pages/SchedulePage.jsx';
 import CoursesPage from './pages/CoursesPage.jsx';
@@ -75,28 +78,31 @@ function App() {
         )}
         <Routes>
           <Route path="/" element={<WelcomePage />} />
-          <Route path="/home" element={<HomePage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/schedule" element={<SchedulePage />} />
-          <Route path="/courses" element={<CoursesPage />} />
-          <Route path="/courses/:id" element={<CoursePage />} />
-          <Route path="/admin" element={<AdminPage />} />
-          <Route path="/admin/config/:role" element={<AdminConfigPage />} />
-                  <Route path="/admin/custom-blocks" element={<CustomBlocksPage />} />
-                  <Route path="/admin/invitation-codes" element={<InvitationCodesPage />} />
-                  <Route path="/admin/events" element={<AdminEventsPage />} />
-                  <Route path="/admin/schedule" element={<AdminSchedulePage />} />
-                  <Route path="/superadmin" element={<SuperAdminPage />} />
-          <Route path="/services" element={<ServicesPage />} />
-          <Route path="/events" element={<EventsPage />} />
-          <Route path="/news" element={<NewsPage />} />
-          <Route path="/payment" element={<PaymentPage />} />
-          <Route path="/admission" element={<AdmissionPage />} />
-          <Route path="/admission/level" element={<AdmissionLevelPage />} />
-          <Route path="/admission/directions/:level" element={<AdmissionDirectionsPage />} />
-          <Route path="/admission/apply/:directionId" element={<AdmissionApplyPage />} />
-          <Route path="/admission/my-applications" element={<AdmissionMyApplicationsPage />} />
-          <Route path="/admin/applications" element={<AdminApplicationsPage />} />
+          <Route element={<MainLayout />}>
+            <Route path="home" element={<HomePage />} />
+            <Route path="hub" element={<HubPage />} />
+            <Route path="profile" element={<ProfilePage />} />
+            <Route path="schedule" element={<SchedulePage />} />
+            <Route path="courses" element={<CoursesPage />} />
+            <Route path="courses/:id" element={<CoursePage />} />
+            <Route path="admin" element={<AdminPage />} />
+            <Route path="admin/config/:role" element={<AdminConfigPage />} />
+            <Route path="admin/custom-blocks" element={<CustomBlocksPage />} />
+            <Route path="admin/invitation-codes" element={<InvitationCodesPage />} />
+            <Route path="admin/events" element={<AdminEventsPage />} />
+            <Route path="admin/schedule" element={<AdminSchedulePage />} />
+            <Route path="superadmin" element={<SuperAdminPage />} />
+            <Route path="services" element={<ServicesPage />} />
+            <Route path="events" element={<EventsPage />} />
+            <Route path="news" element={<NewsPage />} />
+            <Route path="payment" element={<PaymentPage />} />
+            <Route path="admission" element={<AdmissionPage />} />
+            <Route path="admission/level" element={<AdmissionLevelPage />} />
+            <Route path="admission/directions/:level" element={<AdmissionDirectionsPage />} />
+            <Route path="admission/apply/:directionId" element={<AdmissionApplyPage />} />
+            <Route path="admission/my-applications" element={<AdmissionMyApplicationsPage />} />
+            <Route path="admin/applications" element={<AdminApplicationsPage />} />
+          </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
