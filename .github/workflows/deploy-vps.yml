@@ -26,6 +26,7 @@ jobs:
           script: |
             set -e
             cd ${{ secrets.VPS_DEPLOY_PATH }}
+            git config --global --add safe.directory ${{ secrets.VPS_DEPLOY_PATH }}
             git fetch origin
             git reset --hard origin/main
             chmod +x deploy/deploy-on-server.sh
