@@ -462,6 +462,17 @@ class UniversityAPIService {
     }
   }
 
+  // Внешний API мероприятий (ивенты) для виджетов Главная/Хаб
+  async getExternalEvents(limit = 10) {
+    try {
+      const response = await this.client.get('/external/events', { params: { limit } });
+      return response.data;
+    } catch (error) {
+      console.error('Get external events error:', error);
+      return { events: [], bot_link: 'https://t.me/events_bot' };
+    }
+  }
+
   // Получение событий
   async getEvents(universityId = null) {
     try {

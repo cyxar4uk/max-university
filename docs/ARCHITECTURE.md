@@ -54,14 +54,16 @@
 │  ┌──────────────────────────────────────────────┐   │
 │  │              Routing (HashRouter)            │   │
 │  │  / → WelcomePage (invitation code)           │   │
-│  │  /home → HomePage (role-based widgets)       │   │
-│  │  /admin → AdminPage (university admin)       │   │
-│  │  /superadmin → SuperAdminPage               │   │
+│  │  MainLayout: bottom nav Главная | Хаб | Учёба │   │
+│  │  /home → HomePage (widgets dashboard)        │   │
+│  │  /hub → HubPage (feed, stories, events)      │   │
+│  │  /schedule, /courses, … → Учёба              │   │
+│  │  /admin, /superadmin → Admin                 │   │
 │  └──────────────────────────────────────────────┘   │
 │                                                        │
 │  ┌──────────────────────────────────────────────┐   │
 │  │          Widget System (Modular)             │   │
-│  │  BlockWidget → routes to specific widgets    │   │
+│  │  BlockWidget, HubEventsWidget, feed cards    │   │
 │  │  ScheduleWidget, NewsWidget, etc.           │   │
 │  └──────────────────────────────────────────────┘   │
 │                                                        │
@@ -96,6 +98,32 @@
 - **Docker Compose**: Оркестрация сервисов
 - **GitHub Actions**: CI/CD pipeline
 - **GitHub Pages**: Хостинг frontend
+
+### Разделы приложения (инструменты + лента)
+
+- **Главная** (`/home`): дашборд с виджетами по ролям (расписание, новости, услуги, внеучебная жизнь и т.д.). Нижняя навигация общая для всего приложения.
+- **Хаб** (`/hub`): лента постов из cold_news (по чатам/источникам), заглушка сторис, виджет мероприятий (ивенты) с переходом в бота.
+- **Учёба**: расписание, курсы, услуги, оплата, поступление и т.д. (маршруты `/schedule`, `/courses`, `/services` и др.). В нижней навигации активна вкладка «Учёба».
+
+Нижняя панель всегда отображает три вкладки: **Главная**, **Хаб**, **Учёба**.
+
+### Интеграция cold_news
+
+Код cold_news взят из [Moroz314/cold_news](https://github.com/Moroz314/cold_news) и интегрирован как сервис в репозиторий max-university (без сохранения истории git). Расположение: `services/cold-news/`.
+
+- **Назначение**: бот для мониторинга и классификации новостей из Telegram-каналов (Node.js, Express, MongoDB, Telegraf, GigaChat).
+- **REST API для MAX**: в `services/cold-news/feed-api.js` запускается отдельный Express-сервер (порт 3001 по умолчанию), эндпоинты:
+  - `GET /api/feed?limit=&offset=&channel=` — лента постов из коллекции `news_posts`;
+  - `GET /api/sources` — список источников (каналов).
+- **Прокси**: FastAPI проксирует запросы с `/api/hub/feed` и `/api/hub/sources` на cold_news (переменная окружения `COLD_NEWS_FEED_URL`, по умолчанию `http://localhost:3001`).
+
+### Интеграция мероприятий (ивенты)
+
+Мероприятия подключаются по внешнему API проекта ивентов. В MAX:
+
+- Backend проксирует запросы на внешний API при заданной переменной `EVENTS_API_URL`.
+- Эндпоинт: `GET /api/external/events?limit=` возвращает список мероприятий и ссылку на бота (`bot_link`).
+- Виджет `HubEventsWidget` отображает карточки мероприятий и кнопку «Открыть в боте». Контракт API для проекта ивентов описан в [docs/events-api.md](events-api.md).
 
 ## Логика работы приложения
 

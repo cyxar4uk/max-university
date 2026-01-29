@@ -1170,6 +1170,27 @@ async def get_hub_sources():
         print(f"Hub sources proxy error: {e}")
         return {"sources": []}
 
+# External events API (ивенты): proxy to events project API when EVENTS_API_URL is set
+EVENTS_API_URL = os.environ.get("EVENTS_API_URL", "").rstrip("/")
+EVENTS_BOT_LINK = os.environ.get("EVENTS_BOT_LINK", "https://t.me/events_bot")
+
+@app.get("/api/external/events")
+async def get_external_events(limit: Optional[int] = 10):
+    """Proxy to external events API for Hub/Home widgets. Returns list of events and bot_link."""
+    if not EVENTS_API_URL:
+        return {"events": [], "bot_link": EVENTS_BOT_LINK}
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            r = await client.get(f"{EVENTS_API_URL}/events", params={"limit": limit or 10})
+            r.raise_for_status()
+            data = r.json()
+            if isinstance(data, list):
+                return {"events": data, "bot_link": EVENTS_BOT_LINK}
+            return {"events": data.get("events", data.get("items", [])), "bot_link": data.get("bot_link", EVENTS_BOT_LINK)}
+    except Exception as e:
+        print(f"External events proxy error: {e}")
+        return {"events": [], "bot_link": EVENTS_BOT_LINK}
+
 @app.get("/api/statistics")
 async def get_statistics(user_id: Optional[int] = None):
     """

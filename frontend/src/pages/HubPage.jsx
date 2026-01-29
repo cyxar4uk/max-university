@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useMAXBridge } from '../useMAXBridge.js';
 import apiService from '../api-service.js';
+import HubEventsWidget from '../Widgets/HubEventsWidget.jsx';
 
 /**
  * Hub page: feed (cold_news), stories placeholder, events widgets.
@@ -176,17 +177,7 @@ const HubPage = () => {
         {/* Events block: widget + link to bot */}
         <section className="hub-events">
           <h2 className="hub-section-label">Мероприятия</h2>
-          <div className="hub-events-widget">
-            <p>Информация о мероприятиях и регистрация — в боте.</p>
-            <a
-              href="https://t.me/events_bot"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hub-events-bot-link"
-            >
-              Открыть в боте
-            </a>
-          </div>
+          <HubEventsWidget limit={5} />
         </section>
       </main>
     </div>
