@@ -28,7 +28,6 @@ jobs:
         working-directory: ./frontend
         run: npm ci && npm run build
         env:
-          NODE_ENV: production
           VITE_BASE_URL: /
           VITE_API_URL: https://max-university.anyway-community.ru/api
 
