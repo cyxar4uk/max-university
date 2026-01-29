@@ -480,6 +480,117 @@
   opacity: 0.9;
 }
 
+.hub-profile-avatar {
+  cursor: pointer;
+}
+
+.hub-feed-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.hub-feed-source-select {
+  padding: 6px 12px;
+  border-radius: var(--max-radius);
+  border: 1px solid var(--max-border);
+  font-size: 13px;
+  background: var(--max-bg);
+  color: var(--max-text);
+  min-width: 140px;
+}
+
+.hub-feed-loading {
+  text-align: center;
+  padding: 24px;
+  color: var(--max-text-secondary);
+}
+
+.hub-feed-posts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.feed-post-card {
+  background: var(--max-bg);
+  border-radius: var(--max-radius);
+  padding: 16px;
+  border: 1px solid var(--max-border);
+  box-shadow: var(--max-shadow);
+}
+
+.feed-post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.feed-post-source {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--max-primary);
+}
+
+.feed-post-date {
+  font-size: 12px;
+  color: var(--max-text-secondary);
+}
+
+.feed-post-text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--max-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+}
+
+.feed-post-footer {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.feed-post-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.feed-post-tag {
+  font-size: 11px;
+  padding: 4px 8px;
+  background: var(--max-bg-secondary);
+  border-radius: 6px;
+  color: var(--max-text-secondary);
+}
+
+.feed-post-link {
+  font-size: 12px;
+  color: var(--max-primary);
+  text-decoration: none;
+}
+
+.feed-post-link:hover {
+  text-decoration: underline;
+}
+
 .empty-state {
   text-align: center;
   padding: 40px 20px;

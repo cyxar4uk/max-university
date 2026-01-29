@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
+import os
 import uvicorn
 import json
 import hmac
@@ -1134,6 +1135,40 @@ async def get_news():
     ]
     
     return {"news": mock_news}
+
+# Hub feed: proxy to cold_news feed API (optional; if not set, return empty feed)
+COLD_NEWS_FEED_URL = os.environ.get("COLD_NEWS_FEED_URL", "http://localhost:3001")
+
+@app.get("/api/hub/feed")
+async def get_hub_feed(
+    limit: Optional[int] = 20,
+    offset: Optional[int] = 0,
+    channel: Optional[str] = None,
+):
+    """Proxy to cold_news feed API for Hub page."""
+    try:
+        params = {"limit": min(limit or 20, 100), "offset": offset or 0}
+        if channel:
+            params["channel"] = channel
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(f"{COLD_NEWS_FEED_URL}/api/feed", params=params)
+            r.raise_for_status()
+            return r.json()
+    except Exception as e:
+        print(f"Hub feed proxy error: {e}")
+        return {"posts": [], "total": 0}
+
+@app.get("/api/hub/sources")
+async def get_hub_sources():
+    """Proxy to cold_news sources API for Hub feed source selector."""
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.get(f"{COLD_NEWS_FEED_URL}/api/sources")
+            r.raise_for_status()
+            return r.json()
+    except Exception as e:
+        print(f"Hub sources proxy error: {e}")
+        return {"sources": []}
 
 @app.get("/api/statistics")
 async def get_statistics(user_id: Optional[int] = None):

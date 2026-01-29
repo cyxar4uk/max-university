@@ -440,6 +440,28 @@ class UniversityAPIService {
     }
   }
 
+  // Hub: лента постов (cold_news)
+  async getHubFeed(params = {}) {
+    try {
+      const response = await this.client.get('/hub/feed', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Get hub feed error:', error);
+      return { posts: [], total: 0 };
+    }
+  }
+
+  // Hub: источники для настройки ленты
+  async getHubSources() {
+    try {
+      const response = await this.client.get('/hub/sources');
+      return response.data;
+    } catch (error) {
+      console.error('Get hub sources error:', error);
+      return { sources: [] };
+    }
+  }
+
   // Получение событий
   async getEvents(universityId = null) {
     try {

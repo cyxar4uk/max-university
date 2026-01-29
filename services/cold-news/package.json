@@ -1,0 +1,33 @@
+{
+  "name": "bot_rekom_it",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"node ./components/receiving_post.js\" \"node index.js\"",
+    "start": "node index.js",
+    "feed-api": "node feed-api.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "axios": "^1.8.4",
+    "cheerio": "^1.0.0",
+    "dotenv": "^16.5.0",
+    "input": "^1.0.1",
+    "jsdom": "^26.1.0",
+    "mongoose": "^8.13.2",
+    "node-telegram-bot-api": "^0.66.0",
+    "qs": "^6.14.0",
+    "telegram": "^2.26.22",
+    "telegram-mtproto": "^1.0.5",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
