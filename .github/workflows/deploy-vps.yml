@@ -1,9 +1,6 @@
 # Автодеплой на VPS при push в main.
-# Секреты в настройках репозитория (Settings -> Secrets and variables -> Actions):
-#   VPS_HOST          — IP или хост (например 208.92.227.67)
-#   VPS_USER          — пользователь SSH (например root)
-#   SSH_PRIVATE_KEY   — приватный ключ SSH (содержимое id_rsa)
-#   VPS_DEPLOY_PATH   — путь к репозиторию на сервере (например /www/wwwroot/max-university)
+# Фронтенд собирается в GitHub Actions (Node на сервере не нужен).
+# Секреты: VPS_HOST, VPS_USER, SSH_PRIVATE_KEY, VPS_DEPLOY_PATH, VPS_WWW_ROOT
 
 name: Deploy to VPS
 
@@ -17,7 +14,34 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy via SSH
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm ci && npm run build
+        env:
+          NODE_ENV: production
+          VITE_BASE_URL: /
+          VITE_API_URL: https://max-university.anyway-community.ru/api
+
+      - name: Copy frontend to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "frontend/dist"
+          target: "/tmp"
+
+      - name: Deploy and restart on server
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -25,9 +49,14 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
-            cd ${{ secrets.VPS_DEPLOY_PATH }}
-            git config --global --add safe.directory ${{ secrets.VPS_DEPLOY_PATH }}
+            WWW_ROOT="${{ secrets.VPS_WWW_ROOT }}"
+            REPO_PATH="${{ secrets.VPS_DEPLOY_PATH }}"
+            mkdir -p "$WWW_ROOT"
+            cp -r /tmp/dist/. "$WWW_ROOT/" 2>/dev/null || cp -r /tmp/dist/* "$WWW_ROOT/"
+            rm -rf /tmp/dist
+            cd "$REPO_PATH"
+            git config --global --add safe.directory "$REPO_PATH"
             git fetch origin
             git reset --hard origin/main
-            chmod +x deploy/deploy-on-server.sh
-            ./deploy/deploy-on-server.sh
+            (systemctl restart max-university-backend 2>/dev/null) || (cd "$REPO_PATH" && docker-compose up -d --build backend 2>/dev/null) || true
+            echo "Deploy done."
