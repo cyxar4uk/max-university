@@ -53,10 +53,11 @@
 │                                                        │
 │  ┌──────────────────────────────────────────────┐   │
 │  │              Routing (HashRouter)            │   │
-│  │  / → WelcomePage (invitation code)           │   │
+│  │  / → redirect /home                          │   │
 │  │  MainLayout: bottom nav Главная | Хаб | Учёба │   │
-│  │  /home → HomePage (widgets dashboard)        │   │
+│  │  /home → MainPage (виджеты + лента)          │   │
 │  │  /hub → HubPage (feed, stories, events)      │   │
+│  │  /study → StudyGate (код приглашения или → расписание) │   │
 │  │  /schedule, /courses, … → Учёба              │   │
 │  │  /admin, /superadmin → Admin                 │   │
 │  └──────────────────────────────────────────────┘   │
@@ -80,7 +81,7 @@
 ### Backend Stack
 - **FastAPI 0.104+**: Современный async фреймворк с автоматической документацией
 - **Python 3.9+**: Async/await для высокой производительности
-- **SQLite**: Легковесная БД, легко мигрируется на PostgreSQL
+- **SQLite** (по умолчанию) / **PostgreSQL** (рекомендуется для продакшена): хранение пользователей и настроек на сервере, чтобы данные не сбрасывались при деплое. См. [docs/DATABASE.md](DATABASE.md).
 - **Uvicorn**: ASGI сервер для FastAPI
 - **Pydantic**: Валидация данных и сериализация
 - **httpx**: Async HTTP клиент для MAX API
@@ -117,9 +118,17 @@
   - `GET /api/sources` — список источников (каналов).
 - **Прокси**: FastAPI проксирует запросы с `/api/hub/feed` и `/api/hub/sources` на cold_news (переменная окружения `COLD_NEWS_FEED_URL`, по умолчанию `http://localhost:3001`).
 
+### Лента постов (запуск cold_news)
+
+Чтобы работала лента на Главной и в Хабе, нужно запустить API cold_news и задать `COLD_NEWS_FEED_URL`. Подробно: [docs/HUB_FEED_SETUP.md](HUB_FEED_SETUP.md).
+
+### Бот: приветствие и кнопка «Открыть приложение»
+
+При команде `/start` бот отправляет приветственное сообщение и инлайн-кнопку «Открыть приложение» ([документация MAX](https://dev.max.ru/docs-api): тип кнопки `web_app`). Чтобы кнопка открывала ваше мини-приложение, задайте переменную окружения **MINI_APP_URL** на бэкенде — URL развёрнутого мини-приложения (например, `https://your-domain.com/max-university`).
+
 ### Интеграция мероприятий (ивенты)
 
-Мероприятия подключаются по внешнему API проекта ивентов. В MAX:
+Мероприятия подключаются по внешнему API проекта ивентов. Ссылка на бота: [События РАНХиГС](https://t.me/event_ranepa_bot). В MAX:
 
 - Backend проксирует запросы на внешний API при заданной переменной `EVENTS_API_URL`.
 - Эндпоинт: `GET /api/external/events?limit=` возвращает список мероприятий и ссылку на бота (`bot_link`).

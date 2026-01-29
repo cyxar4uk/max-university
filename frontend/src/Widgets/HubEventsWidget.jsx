@@ -6,7 +6,7 @@ import apiService from '../api-service.js';
  * Used on Hub and optionally on Main (Главная).
  */
 const HubEventsWidget = ({ limit = 5, compact = false }) => {
-  const [data, setData] = useState({ events: [], bot_link: 'https://t.me/events_bot' });
+  const [data, setData] = useState({ events: [], bot_link: 'https://t.me/event_ranepa_bot' });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -16,10 +16,10 @@ const HubEventsWidget = ({ limit = 5, compact = false }) => {
         const res = await apiService.getExternalEvents(limit);
         setData({
           events: res.events || [],
-          bot_link: res.bot_link || 'https://t.me/events_bot',
+          bot_link: res.bot_link || 'https://t.me/event_ranepa_bot',
         });
       } catch (e) {
-        setData({ events: [], bot_link: 'https://t.me/events_bot' });
+        setData({ events: [], bot_link: 'https://t.me/event_ranepa_bot' });
       } finally {
         setLoading(false);
       }

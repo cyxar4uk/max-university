@@ -5,54 +5,52 @@ import { setUserFromMAX } from '../userSlice.js';
 import apiService from '../api-service.js';
 import { getMockUserByRole } from '../mockUsers.js';
 
-const WelcomePage = () => {
+const WelcomePage = ({ returnTo }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [searchParams] = useSearchParams();
-  const [loading, setLoading] = useState(true);
-  const [showInvitationForm, setShowInvitationForm] = useState(false);
+  const [loading, setLoading] = useState(!returnTo);
+  const [showInvitationForm, setShowInvitationForm] = useState(!!returnTo);
   const [invitationCode, setInvitationCode] = useState('');
   const [codeError, setCodeError] = useState('');
   const [processingCode, setProcessingCode] = useState(false);
 
+  const goAfterSuccess = returnTo || '/home';
+
   useEffect(() => {
+    if (returnTo) {
+      setLoading(false);
+      setShowInvitationForm(true);
+      return;
+    }
     const initializeUser = async () => {
       try {
-        // Проверяем, есть ли код приглашения в URL
         const codeFromUrl = searchParams.get('code');
         if (codeFromUrl) {
           await handleInvitationCode(codeFromUrl);
           return;
         }
-
-        // Проверяем, есть ли роль в URL (для тестирования)
         const roleFromUrl = searchParams.get('role');
         if (roleFromUrl) {
           await initializeWithRole(roleFromUrl);
           return;
         }
-
-        // Проверяем, есть ли тестовый пользователь в localStorage
         const testUser = localStorage.getItem('testUser');
         if (testUser) {
           const userInfo = JSON.parse(testUser);
           await initializeWithRole(userInfo.role, userInfo.university_id);
           return;
         }
-
-        // Если нет параметров - показываем форму ввода кода
         setShowInvitationForm(true);
         setLoading(false);
-
       } catch (err) {
         console.error('Initialization error:', err);
         setLoading(false);
         setShowInvitationForm(true);
       }
     };
-
     initializeUser();
-  }, [searchParams, dispatch, navigate]);
+  }, [searchParams, dispatch, navigate, returnTo]);
 
   const initializeWithRole = async (role, universityId = 1) => {
     let userInfo;
@@ -91,8 +89,7 @@ const WelcomePage = () => {
     localStorage.setItem('universityId', String(universityId));
     localStorage.setItem('maxUserId', String(userInfo.id));
 
-    // Переходим на главную страницу
-    navigate('/home', { replace: true });
+    navigate(goAfterSuccess, { replace: true });
   };
 
   const handleInvitationCode = async (code) => {
@@ -128,10 +125,9 @@ const WelcomePage = () => {
       localStorage.setItem('userRole', result.role);
       localStorage.setItem('universityId', String(result.university_id));
       localStorage.setItem('maxUserId', String(userInfo.id));
-      localStorage.setItem('invitationCodeUsed', 'true'); // Флаг, что использован код
+      localStorage.setItem('invitationCodeUsed', 'true');
 
-      // Переходим на главную страницу
-      navigate('/home', { replace: true });
+      navigate(goAfterSuccess, { replace: true });
 
     } catch (error) {
       console.error('Invitation code error:', error);

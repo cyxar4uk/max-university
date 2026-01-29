@@ -13,6 +13,7 @@ const MainLayout = () => {
   const isMain = path === '/home' || path === '/';
   const isHub = path === '/hub';
   const isStudy =
+    path === '/study' ||
     path === '/schedule' ||
     path.startsWith('/courses') ||
     path === '/services' ||
@@ -25,7 +26,7 @@ const MainLayout = () => {
   const handleNavTo = (route) => {
     if (route === '/home' && path === '/home') return;
     if (route === '/hub' && path === '/hub') return;
-    if (route === '/schedule' && isStudy) return;
+    if (route === '/study' && isStudy) return;
     navigate(route);
   };
 
@@ -54,7 +55,7 @@ const MainLayout = () => {
         </button>
         <button
           className={`nav-item ${isStudy ? 'active' : ''}`}
-          onClick={() => handleNavTo('/schedule')}
+          onClick={() => handleNavTo('/study')}
           aria-label="Учёба"
         >
           <span className="nav-icon" aria-hidden>🎓</span>

@@ -469,7 +469,7 @@ class UniversityAPIService {
       return response.data;
     } catch (error) {
       console.error('Get external events error:', error);
-      return { events: [], bot_link: 'https://t.me/events_bot' };
+      return { events: [], bot_link: 'https://t.me/event_ranepa_bot' };
     }
   }
 

@@ -8,9 +8,10 @@ import MockModeNotification from './components/MockModeNotification.jsx';
 
 // Layout
 import MainLayout from './components/MainLayout.jsx';
+import StudyGate from './components/StudyGate.jsx';
 // Pages
 import WelcomePage from './pages/WelcomePage.jsx';
-import HomePage from './pages/HomePage.jsx';
+import MainPage from './pages/MainPage.jsx';
 import HubPage from './pages/HubPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import SchedulePage from './pages/SchedulePage.jsx';
@@ -77,10 +78,11 @@ function App() {
           />
         )}
         <Routes>
-          <Route path="/" element={<WelcomePage />} />
+          <Route path="/" element={<Navigate to="/home" replace />} />
           <Route element={<MainLayout />}>
-            <Route path="home" element={<HomePage />} />
+            <Route path="home" element={<MainPage />} />
             <Route path="hub" element={<HubPage />} />
+            <Route path="study" element={<StudyGate />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="schedule" element={<SchedulePage />} />
             <Route path="courses" element={<CoursesPage />} />

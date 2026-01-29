@@ -153,6 +153,20 @@ bot_api = MAXBotAPI(MAX_BOT_TOKEN)
 
 # ============ INLINE КЛАВИАТУРЫ ============
 
+# URL мини-приложения для кнопки «Открыть приложение» (из настроек бота или env)
+MINI_APP_URL = os.environ.get("MINI_APP_URL", "").rstrip("/")
+
+def get_welcome_open_app_keyboard() -> Dict:
+    """Клавиатура с одной кнопкой «Открыть приложение» — открывает мини-приложение (MAX: web_app)."""
+    url = (MINI_APP_URL or "").strip() or "https://max.ru"
+    return {
+        "inline_keyboard": [
+            [
+                {"text": "Открыть приложение", "web_app": {"url": url}},
+            ]
+        ]
+    }
+
 def get_role_selection_keyboard() -> Dict:
     """Клавиатура выбора роли"""
     return {
@@ -340,29 +354,33 @@ def get_quick_actions_keyboard(action: str) -> Dict:
 # ============ ОБРАБОТЧИКИ КОМАНД ============
 
 async def handle_start_command(user_id: int, user_data: Dict):
-    """Обработка команды /start"""
-    
-    # Проверяем, есть ли уже роль у пользователя
+    """Обработка команды /start: приветствие + инлайн-кнопка «Открыть приложение» (MAX: open_app / web_app)."""
+    # Приветственное сообщение с кнопкой «Открыть приложение» (документация MAX: dev.max.ru/docs-api)
+    text = (
+        f"👋 Привет, {user_data.get('first_name', 'пользователь')}!\n\n"
+        "Добро пожаловать в **Цифровой университет** на платформе MAX.\n\n"
+        "Нажмите кнопку ниже, чтобы открыть приложение:"
+    )
+    await bot_api.send_message(
+        user_id=user_id,
+        text=text,
+        reply_markup=get_welcome_open_app_keyboard()
+    )
+    # Дополнительно: если уже есть роль — показываем главное меню
     if user_id in users_db and users_db[user_id].get("role"):
         role = users_db[user_id]["role"]
-        text = f"С возвращением, {user_data.get('first_name', 'пользователь')}!\n\n" \
-               f"Ваша роль: {get_role_name(role)}\n\n" \
-               f"Выберите раздел или откройте приложение:"
-        
+        menu_text = f"Или выберите раздел:\n\nВаша роль: {get_role_name(role)}"
         await bot_api.send_message(
             user_id=user_id,
-            text=text,
+            text=menu_text,
             reply_markup=get_main_menu_keyboard(role)
         )
     else:
-        # Первый запуск - выбор роли
-        text = f"👋 Привет, {user_data.get('first_name', 'пользователь')}!\n\n" \
-               f"Добро пожаловать в **Цифровой университет** на платформе MAX!\n\n" \
-               f"Для начала, выберите свою роль:"
-        
+        # Первый запуск — выбор роли
+        role_text = "Для начала выберите свою роль:"
         await bot_api.send_message(
             user_id=user_id,
-            text=text,
+            text=role_text,
             reply_markup=get_role_selection_keyboard()
         )
 
@@ -1172,7 +1190,7 @@ async def get_hub_sources():
 
 # External events API (ивенты): proxy to events project API when EVENTS_API_URL is set
 EVENTS_API_URL = os.environ.get("EVENTS_API_URL", "").rstrip("/")
-EVENTS_BOT_LINK = os.environ.get("EVENTS_BOT_LINK", "https://t.me/events_bot")
+EVENTS_BOT_LINK = os.environ.get("EVENTS_BOT_LINK", "https://t.me/event_ranepa_bot")
 
 @app.get("/api/external/events")
 async def get_external_events(limit: Optional[int] = 10):
