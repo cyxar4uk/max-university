@@ -3,9 +3,11 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 
 // https://vitejs.dev/config/
+// Для VPS (корень домена): base: '/'. Для GitHub Pages: base: '/max-university/'
+const base = typeof process.env.VITE_BASE_URL !== 'undefined' ? process.env.VITE_BASE_URL : '/max-university/';
 export default defineConfig({
   plugins: [react()],
-  base: '/max-university/',
+  base,
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

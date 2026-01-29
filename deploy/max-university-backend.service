@@ -1,0 +1,24 @@
+# Пример unit для systemd: бэкенд max-university.
+# Установка:
+#   sudo cp deploy/max-university-backend.service /etc/systemd/system/
+#   sudo sed -i "s|/path/to/repo|$(pwd)|g" /etc/systemd/system/max-university-backend.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable max-university-backend
+#   sudo systemctl start max-university-backend
+
+[Unit]
+Description=Max University FastAPI Backend
+After=network.target
+
+[Service]
+Type=simple
+User=www
+Group=www
+WorkingDirectory=/path/to/repo/backend
+Environment="PATH=/path/to/repo/venv/bin"
+ExecStart=/path/to/repo/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

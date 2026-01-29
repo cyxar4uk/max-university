@@ -1,0 +1,32 @@
+# Автодеплой на VPS при push в main.
+# Секреты в настройках репозитория (Settings -> Secrets and variables -> Actions):
+#   VPS_HOST          — IP или хост (например 208.92.227.67)
+#   VPS_USER          — пользователь SSH (например root)
+#   SSH_PRIVATE_KEY   — приватный ключ SSH (содержимое id_rsa)
+#   VPS_DEPLOY_PATH   — путь к репозиторию на сервере (например /www/wwwroot/max-university)
+
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd ${{ secrets.VPS_DEPLOY_PATH }}
+            git fetch origin
+            git reset --hard origin/main
+            chmod +x deploy/deploy-on-server.sh
+            ./deploy/deploy-on-server.sh
