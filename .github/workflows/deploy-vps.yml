@@ -51,8 +51,16 @@ jobs:
             WWW_ROOT="${{ secrets.VPS_WWW_ROOT }}"
             REPO_PATH="${{ secrets.VPS_DEPLOY_PATH }}"
             mkdir -p "$WWW_ROOT"
-            cp -r /tmp/dist/. "$WWW_ROOT/" 2>/dev/null || cp -r /tmp/dist/* "$WWW_ROOT/"
-            rm -rf /tmp/dist
+            if [ -d /tmp/frontend/dist ]; then
+              cp -r /tmp/frontend/dist/. "$WWW_ROOT/"
+              rm -rf /tmp/frontend
+            elif [ -d /tmp/dist ]; then
+              cp -r /tmp/dist/. "$WWW_ROOT/"
+              rm -rf /tmp/dist
+            else
+              echo "ERROR: dist not found in /tmp/dist or /tmp/frontend/dist"
+              exit 1
+            fi
             cd "$REPO_PATH"
             git config --global --add safe.directory "$REPO_PATH"
             git fetch origin
