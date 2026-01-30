@@ -5,99 +5,129 @@ import { useMAXBridge } from '../useMAXBridge.js';
 import { getDisplayUser } from '../utils/displayUser.js';
 import UserSwitcher from '../UserSwitcher.jsx';
 
+const roleNames = {
+  student: 'Студент',
+  applicant: 'Абитуриент',
+  employee: 'Сотрудник',
+  teacher: 'Учитель',
+  admin: 'Администратор',
+};
+
 const ProfilePage = () => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.user);
   const { userInfo } = useMAXBridge();
   const { displayName, avatarUrl } = getDisplayUser(userInfo, user);
 
-  const roleNames = {
-    student: 'Студент',
-    applicant: 'Абитуриент',
-    employee: 'Сотрудник',
-    admin: 'Администратор'
-  };
+  const currentRoleLabel = user.role ? (roleNames[user.role] || user.role) : null;
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <button 
-          onClick={() => navigate('/home')}
-          style={{
-            background: 'none',
-            border: 'none',
-            fontSize: '20px',
-            cursor: 'pointer',
-            padding: '0',
-            marginRight: '12px'
-          }}
+    <div className="page profile-page">
+      <header className="profile-page-header">
+        <button
+          type="button"
+          className="profile-page-back"
+          onClick={() => navigate(-1)}
+          aria-label="Назад"
         >
-          ←
+          ‹
         </button>
-        <h1 className="page-title">👤 Профиль</h1>
-      </div>
+      </header>
 
-      <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-        <div className="profile-avatar">
+      <div className="profile-page-hero">
+        <div className="profile-page-avatar-wrap">
           {avatarUrl ? (
-            <img src={avatarUrl} alt="" className="profile-avatar-img" />
+            <img src={avatarUrl} alt="" className="profile-page-avatar-img" />
           ) : (
-            <span className="profile-avatar-initial">{displayName.charAt(0).toUpperCase() || '👤'}</span>
+            <span className="profile-page-avatar-initial">
+              {displayName.charAt(0).toUpperCase() || '👤'}
+            </span>
           )}
         </div>
-        <h2 className="profile-name">
-          {displayName}
-        </h2>
-        {user.role && (
-          <p className="profile-role">
-            {roleNames[user.role] || user.role}
-          </p>
+        <h1 className="profile-page-name">{displayName}</h1>
+        {currentRoleLabel && (
+          <p className="profile-page-role">{currentRoleLabel}</p>
         )}
       </div>
 
-      <div className="card">
-        <p className="card-title">ID пользователя</p>
-        <p className="card-text">{user.maxUserId}</p>
+      <div className="profile-page-sections">
+        {/* Общая информация */}
+        <section className="profile-section">
+          <div className="profile-section-header">
+            <h2 className="profile-section-title">Общая информация</h2>
+            <button
+              type="button"
+              className="profile-section-action"
+              onClick={() => {}}
+              aria-label="Изменить"
+            >
+              Изменить
+            </button>
+          </div>
+          <div className="profile-info-block">
+            <div className="profile-info-row">
+              <span className="profile-info-label">Университет</span>
+              <span className="profile-info-value">РАНХиГС</span>
+            </div>
+            <div className="profile-info-row">
+              <span className="profile-info-label">Направление</span>
+              <span className="profile-info-value">Бизнес-информатика</span>
+            </div>
+            <div className="profile-info-row">
+              <span className="profile-info-label">Курс</span>
+              <span className="profile-info-value">1 курс</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Тестирование / Смена роли */}
+        {user.canChangeRole !== false && (
+          <section className="profile-section">
+            <h2 className="profile-section-title">Тестирование</h2>
+            <div className="profile-section-role-row">
+              <span className="profile-section-role-current">{currentRoleLabel || '—'}</span>
+              <UserSwitcher />
+            </div>
+          </section>
+        )}
+
+        {user.canChangeRole === false && (
+          <section className="profile-section profile-section--muted">
+            <p className="profile-section-note">
+              Вы вошли по коду приглашения. Смена роли недоступна.
+            </p>
+          </section>
+        )}
+
+        {/* Помощь и поддержка */}
+        <section className="profile-section">
+          <button
+            type="button"
+            className="profile-section-link"
+            onClick={() => {}}
+            aria-label="Помощь и поддержка"
+          >
+            <span>Помощь и поддержка</span>
+            <span className="profile-section-link-chevron" aria-hidden>›</span>
+          </button>
+        </section>
+
+        {/* Что нового */}
+        <section className="profile-section">
+          <button
+            type="button"
+            className="profile-section-link profile-section-link--new"
+            onClick={() => {}}
+            aria-label="Что нового"
+          >
+            <span>Что нового</span>
+            <span className="profile-section-link-dot" aria-hidden />
+            <span className="profile-section-link-chevron" aria-hidden>›</span>
+          </button>
+        </section>
       </div>
-
-      {user.username && (
-        <div className="card">
-          <p className="card-title">Username</p>
-          <p className="card-text">@{user.username}</p>
-        </div>
-      )}
-
-      <div className="card">
-        <p className="card-title">Язык</p>
-        <p className="card-text">{user.languageCode || 'ru'}</p>
-      </div>
-
-      <div className="card">
-        <p className="card-title">Университет</p>
-        <p className="card-text">Российская академия народного хозяйства</p>
-      </div>
-
-      {/* Показываем переключатель только если пользователь может менять роль */}
-      {user.canChangeRole !== false && (
-        <div className="card" style={{ marginTop: '16px' }}>
-          <h3 className="card-title" style={{ marginBottom: '12px' }}>Тестирование</h3>
-          <p className="card-text" style={{ marginBottom: '12px' }}>
-            Переключитесь между тестовыми пользователями для проверки разных ролей
-          </p>
-          <UserSwitcher />
-        </div>
-      )}
-
-      {user.canChangeRole === false && (
-        <div className="card" style={{ marginTop: '16px', background: 'var(--max-bg-secondary)' }}>
-          <p className="card-text" style={{ fontSize: '14px', color: 'var(--max-text-secondary)' }}>
-            ⚠️ Вы вошли по коду приглашения. Смена роли недоступна.
-          </p>
-        </div>
-      )}
     </div>
   );
 };
 
 export default ProfilePage;
-

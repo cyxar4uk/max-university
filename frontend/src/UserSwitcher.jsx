@@ -1,91 +1,78 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import React, { useState, useRef, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { setUserFromMAX } from './userSlice.js';
 import { mockUsers } from './mockUsers.js';
 
-// Компонент для переключения между тестовыми пользователями
+const ROLE_OPTIONS = [
+  { role: 'student', label: 'Студент (Иван)', icon: '👨‍🎓' },
+  { role: 'applicant', label: 'Абитуриент (Мария)', icon: '🎯' },
+  { role: 'employee', label: 'Сотрудник (Петр)', icon: '👔' },
+  { role: 'teacher', label: 'Учитель (Елена)', icon: '👨‍🏫' },
+  { role: 'admin', label: 'Администратор (Анна)', icon: '⚙️' },
+];
+
+/** Переключатель роли: обновляет Redux и localStorage без перезагрузки страницы. */
 const UserSwitcher = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
-  const navigate = useNavigate();
+  const ref = useRef(null);
   const dispatch = useDispatch();
+  const currentRole = useSelector((state) => state.user.role);
 
-  const switchUser = (role) => {
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setIsOpen(false);
+    };
+    if (isOpen) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [isOpen]);
+
+  const switchRole = (role) => {
     const user = mockUsers[role];
-    setCurrentUser(user);
-    
-    // Обновляем Redux
+    if (!user) return;
     dispatch(setUserFromMAX({
-      user: user,
-      role: role,
-      universityId: user.university_id
+      user,
+      role,
+      universityId: user.university_id,
+      canChangeRole: true,
     }));
-    
-    // Обновляем localStorage
     localStorage.setItem('userRole', role);
     localStorage.setItem('universityId', String(user.university_id));
     localStorage.setItem('maxUserId', String(user.id));
     localStorage.setItem('testUser', JSON.stringify(user));
-    
-    // Перезагружаем страницу для применения изменений
-    window.location.hash = '#/';
-    window.location.reload();
+    setIsOpen(false);
   };
 
   return (
-    <div className="user-switcher">
-      <button 
+    <div className="user-switcher" ref={ref}>
+      <button
+        type="button"
+        className="user-switcher-trigger"
         onClick={() => setIsOpen(!isOpen)}
-        style={{
-          padding: '12px',
-          background: 'var(--max-primary)',
-          color: 'white',
-          border: 'none',
-          borderRadius: '8px',
-          cursor: 'pointer',
-          fontSize: '14px',
-          fontWeight: '500',
-          width: '200px',
-          marginBottom: isOpen ? '8px' : '0'
-        }}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        aria-label="Сменить роль"
       >
-        🔄 Сменить пользователя
+        Сменить роль
       </button>
-      
       {isOpen && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <button 
-            className={`user-switcher-btn ${currentUser?.role === 'student' ? 'active' : ''}`}
-            onClick={() => switchUser('student')}
-          >
-            👨‍🎓 Студент (Иван)
-          </button>
-          <button 
-            className={`user-switcher-btn ${currentUser?.role === 'applicant' ? 'active' : ''}`}
-            onClick={() => switchUser('applicant')}
-          >
-            🎯 Абитуриент (Мария)
-          </button>
-          <button 
-            className={`user-switcher-btn ${currentUser?.role === 'employee' ? 'active' : ''}`}
-            onClick={() => switchUser('employee')}
-          >
-            👔 Сотрудник (Петр)
-          </button>
-          <button 
-            className={`user-switcher-btn ${currentUser?.role === 'teacher' ? 'active' : ''}`}
-            onClick={() => switchUser('teacher')}
-          >
-            👨‍🏫 Учитель (Елена)
-          </button>
-          <button 
-            className={`user-switcher-btn ${currentUser?.role === 'admin' ? 'active' : ''}`}
-            onClick={() => switchUser('admin')}
-          >
-            ⚙️ Администратор (Анна)
-          </button>
-        </div>
+        <ul className="user-switcher-dropdown" role="listbox">
+          {ROLE_OPTIONS.map(({ role, label, icon }) => (
+            <li key={role}>
+              <button
+                type="button"
+                className={`user-switcher-option ${currentRole === role ? 'active' : ''}`}
+                onClick={() => switchRole(role)}
+                role="option"
+                aria-selected={currentRole === role}
+              >
+                <span className="user-switcher-option-icon" aria-hidden>{icon}</span>
+                {label}
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

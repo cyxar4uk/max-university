@@ -2419,6 +2419,292 @@ body {
   margin-bottom: 24px;
 }
 
+/* Profile Page — экран настроек/профиля по макету */
+.profile-page {
+  padding: 0 0 80px;
+  max-width: 600px;
+  margin: 0 auto;
+  background: var(--max-bg-secondary);
+}
+
+.profile-page-header {
+  background: var(--max-bg);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--max-border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.profile-page-back {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  font-size: 28px;
+  line-height: 1;
+  color: var(--max-text);
+  cursor: pointer;
+  padding: 0;
+  border-radius: var(--max-radius-xs);
+}
+
+.profile-page-back:hover {
+  background: var(--max-bg-secondary);
+}
+
+.profile-page-hero {
+  background: var(--max-bg);
+  padding: 24px 16px 28px;
+  text-align: center;
+  border-radius: 0 0 var(--max-radius) var(--max-radius);
+  box-shadow: var(--max-shadow);
+}
+
+.profile-page-avatar-wrap {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin: 0 auto 16px;
+  background: var(--max-bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-page-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-page-avatar-initial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: var(--max-primary);
+  background: rgba(0, 136, 204, 0.12);
+}
+
+.profile-page-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--max-text);
+  margin: 0 0 4px 0;
+  line-height: 1.3;
+}
+
+.profile-page-role {
+  font-size: var(--max-font-size-sm);
+  color: var(--max-text-secondary);
+  margin: 0;
+}
+
+.profile-page-sections {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-section {
+  background: var(--max-bg);
+  border-radius: var(--max-radius);
+  padding: 16px;
+  box-shadow: var(--max-shadow-card);
+  border: 1px solid var(--max-border);
+}
+
+.profile-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.profile-section-title {
+  font-size: var(--max-font-size-base);
+  font-weight: 600;
+  color: var(--max-text);
+  margin: 0;
+}
+
+.profile-section-action {
+  font-size: var(--max-font-size-sm);
+  font-weight: 500;
+  color: var(--max-primary);
+  background: none;
+  border: none;
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.profile-section-action:hover {
+  text-decoration: underline;
+}
+
+.profile-info-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profile-info-label {
+  font-size: var(--max-font-size-xs);
+  color: var(--max-text-secondary);
+}
+
+.profile-info-value {
+  font-size: var(--max-font-size-base);
+  font-weight: 600;
+  color: var(--max-text);
+}
+
+.profile-section-role-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.profile-section-role-current {
+  font-size: var(--max-font-size-base);
+  font-weight: 600;
+  color: var(--max-text);
+}
+
+.profile-section--muted {
+  background: var(--max-bg-secondary);
+}
+
+.profile-section-note {
+  font-size: var(--max-font-size-sm);
+  color: var(--max-text-secondary);
+  margin: 0;
+}
+
+.profile-section-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  font-size: var(--max-font-size-base);
+  font-weight: 500;
+  color: var(--max-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.profile-section-link:hover {
+  color: var(--max-primary);
+}
+
+.profile-section-link-chevron {
+  font-size: 1.2rem;
+  color: var(--max-text-secondary);
+}
+
+.profile-section-link--new {
+  position: relative;
+}
+
+.profile-section-link-dot {
+  position: absolute;
+  right: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--max-danger);
+}
+
+/* UserSwitcher — смена роли без перезагрузки */
+.user-switcher {
+  position: relative;
+}
+
+.user-switcher-trigger {
+  padding: 10px 18px;
+  font-size: var(--max-font-size-sm);
+  font-weight: 500;
+  color: var(--max-text);
+  background: var(--max-bg-secondary);
+  border: 1px solid var(--max-border);
+  border-radius: var(--max-radius-sm);
+  cursor: pointer;
+  transition: background var(--max-transition), border-color var(--max-transition);
+}
+
+.user-switcher-trigger:hover {
+  background: var(--max-bg-tertiary);
+  border-color: var(--max-text-muted);
+}
+
+.user-switcher-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin: 6px 0 0 0;
+  padding: 6px 0;
+  list-style: none;
+  background: var(--max-bg);
+  border-radius: var(--max-radius-sm);
+  box-shadow: var(--max-shadow);
+  border: 1px solid var(--max-border);
+  z-index: 100;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.user-switcher-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  font-size: var(--max-font-size-sm);
+  font-weight: 500;
+  color: var(--max-text);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--max-transition);
+}
+
+.user-switcher-option:hover {
+  background: var(--max-bg-secondary);
+}
+
+.user-switcher-option.active {
+  background: rgba(0, 136, 204, 0.1);
+  color: var(--max-primary);
+}
+
+.user-switcher-option-icon {
+  font-size: 1.1rem;
+}
+
 /* Schedule Page - Полное расписание */
 .schedule-date-nav {
   display: flex;

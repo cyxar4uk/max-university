@@ -32,11 +32,13 @@ export function getDisplayName(user) {
 }
 
 /**
- * В компонентах: предпочитаем userInfo (MAX или testUser из useMAXBridge), fallback — Redux.
+ * В компонентах: при наличии данных в Redux предпочитаем Redux (бесшовная смена роли без перезагрузки),
+ * иначе — userInfo из MAX Bridge или testUser.
  * @param {string} [fallbackColor] - цвет фона для сгенерированного аватара (например цвет хедера).
  */
 export function getDisplayUser(userInfo, reduxUser, fallbackColor) {
-  const raw = userInfo || (reduxUser && (reduxUser.firstName != null || reduxUser.first_name != null) ? reduxUser : null);
+  const hasRedux = reduxUser && (reduxUser.firstName != null || reduxUser.first_name != null || reduxUser.maxUserId != null);
+  const raw = hasRedux ? reduxUser : (userInfo || null);
   const user = normalizeUser(raw);
   if (!user) return { displayName: 'Пользователь', avatarUrl: null, user: null };
   const avatarUrl = getAvatarUrl(user, fallbackColor);
