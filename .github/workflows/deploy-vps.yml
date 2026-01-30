@@ -1,6 +1,7 @@
 # Автодеплой на VPS при push в main.
 # Фронтенд собирается в GitHub Actions (Node на сервере не нужен).
 # Секреты: VPS_HOST, VPS_USER, SSH_PRIVATE_KEY, VPS_DEPLOY_PATH, VPS_WWW_ROOT
+# Опционально: EVENTS_API_URL (URL API мероприятий), EVENTS_BOT_LINK (ссылка на бота)
 
 name: Deploy to VPS
 
@@ -42,10 +43,14 @@ jobs:
 
       - name: Deploy and restart on server
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          EVENTS_API_URL: ${{ secrets.EVENTS_API_URL }}
+          EVENTS_BOT_LINK: ${{ secrets.EVENTS_BOT_LINK }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: EVENTS_API_URL,EVENTS_BOT_LINK
           script: |
             set -e
             WWW_ROOT="${{ secrets.VPS_WWW_ROOT }}"
@@ -65,6 +70,13 @@ jobs:
             git config --global --add safe.directory "$REPO_PATH"
             git fetch origin
             git reset --hard origin/main
+            # Записать EVENTS_* из секретов GitHub в .env для бэкенда (если секреты заданы)
+            BACKEND_ENV="$REPO_PATH/backend/.env.events"
+            touch "$BACKEND_ENV"
+            if [ -n "$EVENTS_API_URL" ]; then
+              echo "EVENTS_API_URL=$EVENTS_API_URL" > "$BACKEND_ENV"
+              [ -n "$EVENTS_BOT_LINK" ] && echo "EVENTS_BOT_LINK=$EVENTS_BOT_LINK" >> "$BACKEND_ENV"
+            fi
             (systemctl restart max-university-backend 2>/dev/null) || (cd "$REPO_PATH" && docker-compose up -d --build backend 2>/dev/null) || true
             if [ -d "$REPO_PATH/services/cold-news" ]; then
               (cd "$REPO_PATH/services/cold-news" && npm ci --omit=dev 2>/dev/null) || true

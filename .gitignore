@@ -32,6 +32,7 @@ dist/
 # Environment
 .env
 .env.local
+backend/.env.events
 DEPLOYMENT_CHECKLIST.md
 FINAL_SETUP.md
 fix-github-pages.md
@@ -56,3 +57,5 @@ docs/VPS_DEPLOY.md
 frontend/env.production.example
 services/cold-news/README.md
 docs/DESIGN_SYSTEM.md
+docs/events-api.md
+docs/events-api.md
