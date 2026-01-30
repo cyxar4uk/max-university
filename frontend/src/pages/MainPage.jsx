@@ -11,6 +11,14 @@ const EVENTS_BOT_LINK = 'https://t.me/event_ranepa_bot';
 const baseUrl = typeof import.meta.env?.BASE_URL === 'string' ? import.meta.env.BASE_URL : '/';
 const icon = (name) => `${baseUrl}icons/${name}.svg`;
 
+/** Приветствие по времени суток: Доброе утро / Добрый день / Добрый вечер */
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Доброе утро';
+  if (h < 17) return 'Добрый день';
+  return 'Добрый вечер';
+}
+
 /**
  * Главная: хедер (аватар, поиск), виджеты (расписание + QR + мероприятия),
  * карусель сторис, лента постов до бесконечности, футер в MainLayout.
@@ -101,17 +109,21 @@ const MainPage = () => {
         <div className="main-page-header-inner">
           <button
             type="button"
-            className="main-page-avatar"
+            className="main-page-header-left"
             onClick={handleProfileClick}
             aria-label="Профиль"
           >
-            {userAvatar ? (
-              <img src={userAvatar} alt="" />
-            ) : (
-              <span className="main-page-avatar-initial" aria-hidden>{displayName.charAt(0).toUpperCase()}</span>
-            )}
+            <span className="main-page-avatar">
+              {userAvatar ? (
+                <img src={userAvatar} alt="" />
+              ) : (
+                <span className="main-page-avatar-initial" aria-hidden>{displayName.charAt(0).toUpperCase()}</span>
+              )}
+            </span>
+            <span className="main-page-greeting">
+              {getGreeting()}, {displayName.split(' ')[0] || displayName}
+            </span>
           </button>
-          <div className="main-page-header-center" />
           <button
             type="button"
             className="main-page-search-btn main-page-search-btn-icon"
@@ -124,12 +136,24 @@ const MainPage = () => {
       </header>
 
       <main className="main-page-content">
-        {/* Виджеты: расписание + столбик из двух кнопок (QR, мероприятия) */}
-        <section className="main-page-widgets">
-          <div className="main-page-widget-schedule">
-            <ScheduleWidget block={{ block_type: 'schedule', name: 'Расписание' }} apiService={apiService} />
+        {/* Инструменты: заголовок + Настроить, карточка «Следующая пара» + QR и Мероприятия */}
+        <section className="main-page-tools">
+          <div className="main-page-tools-header">
+            <h2 className="main-page-section-title">Инструменты</h2>
+            <button
+              type="button"
+              className="main-page-tools-configure"
+              onClick={() => navigate('/profile')}
+              aria-label="Настроить"
+            >
+              Настроить
+            </button>
           </div>
-          <div className="main-page-widget-buttons">
+          <div className="main-page-widgets">
+            <div className="main-page-widget-schedule">
+              <ScheduleWidget variant="main" block={{ block_type: 'schedule', name: 'Расписание' }} apiService={apiService} />
+            </div>
+            <div className="main-page-widget-buttons">
             <button
               type="button"
               className="main-page-widget-btn main-page-widget-qr"
@@ -153,11 +177,13 @@ const MainPage = () => {
               </span>
               <span className="main-page-widget-btn-label">Мероприятия</span>
             </a>
+            </div>
           </div>
         </section>
 
-        {/* Карусель сторис (заглушка: при открытии — плейер-заглушка) */}
+        {/* Актуальные истории */}
         <section className="main-page-stories">
+          <h2 className="main-page-section-title">Актуальные истории</h2>
           <div className="main-page-stories-track">
             <div className="main-page-story main-page-story-add">+</div>
             <div className="main-page-story main-page-story-placeholder" />
@@ -166,16 +192,26 @@ const MainPage = () => {
           </div>
         </section>
 
-        {/* Лента постов */}
+        {/* Лента новостей */}
         <section className="main-page-feed">
-          <h2 className="main-page-feed-title">Лента</h2>
+          <h2 className="main-page-section-title">Лента новостей</h2>
           <div className="main-page-feed-list">
             {filteredPosts.length > 0 ? (
               <ul className="main-page-feed-posts">
                 {filteredPosts.map((post) => (
                   <li key={post.id} className="feed-post-card">
-                    <div className="feed-post-header">
-                      <span className="feed-post-source">{post.channelUsername || post.channel || 'Канал'}</span>
+                    <div className="feed-post-author">
+                      <div className="feed-post-author-avatar">
+                        {(post.channelUsername || post.channel || 'К').charAt(0).toUpperCase()}
+                      </div>
+                      <div className="feed-post-author-info">
+                        <span className="feed-post-author-name">{post.channelUsername || post.channel || 'Канал'}</span>
+                        {(post.subscribers != null || post.subscriber_count != null) && (
+                          <span className="feed-post-author-subscribers">
+                            {(post.subscribers ?? post.subscriber_count ?? 0).toLocaleString('ru-RU')} подписчиков
+                          </span>
+                        )}
+                      </div>
                       <span className="feed-post-date">{formatPostDate(post.date)}</span>
                     </div>
                     <div className="feed-post-text">{post.text}</div>

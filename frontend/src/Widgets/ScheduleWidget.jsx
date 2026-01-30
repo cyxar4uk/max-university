@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiService from '../api-service.js';
 
-const ScheduleWidget = ({ block, apiService: apiServiceProp }) => {
+const ScheduleWidget = ({ block, apiService: apiServiceProp, variant }) => {
   const navigate = useNavigate();
   const api = apiServiceProp || apiService;
   const [schedule, setSchedule] = useState([]);
   const [loading, setLoading] = useState(true);
   const [nextClass, setNextClass] = useState(null);
+  const isMainVariant = variant === 'main';
 
   // Форматирование аудитории в четырехзначный формат
   const formatRoom = (room) => {
@@ -73,10 +74,7 @@ const ScheduleWidget = ({ block, apiService: apiServiceProp }) => {
 
   if (loading) {
     return (
-      <div className="widget schedule-widget">
-        <div className="widget-header">
-          <h3 className="widget-title">📅 Расписание</h3>
-        </div>
+      <div className={`widget schedule-widget ${isMainVariant ? 'schedule-widget--main' : ''}`}>
         <div className="widget-content">
           <div className="widget-loading">Загрузка...</div>
         </div>
@@ -86,18 +84,45 @@ const ScheduleWidget = ({ block, apiService: apiServiceProp }) => {
 
   if (!nextClass) {
     return (
-      <div className="widget schedule-widget">
-        <div className="widget-header">
-          <h3 className="widget-title">📅 Расписание</h3>
-          <button 
-            className="widget-more-btn"
-            onClick={() => navigate('/schedule')}
-          >
-            Все →
-          </button>
-        </div>
+      <div className={`widget schedule-widget ${isMainVariant ? 'schedule-widget--main' : ''}`}>
+        {!isMainVariant && (
+          <div className="widget-header">
+            <h3 className="widget-title">📅 Расписание</h3>
+            <button className="widget-more-btn" onClick={() => navigate('/schedule')}>Все →</button>
+          </div>
+        )}
         <div className="widget-content">
           <div className="widget-empty">Ближайших занятий нет</div>
+        </div>
+      </div>
+    );
+  }
+
+  const timeStr = nextClass.time_start || nextClass.time?.split('-')[0] || '—';
+  const roomStr = formatRoom(nextClass.room || nextClass.location);
+  const typeStr = nextClass.type || 'Занятие';
+
+  if (isMainVariant) {
+    return (
+      <div className="schedule-next-class-card schedule-next-class-card--main" onClick={() => navigate('/schedule')} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate('/schedule')}>
+        <div className="schedule-next-class-label">Следующая пара</div>
+        <h3 className="schedule-next-class-title">{nextClass.subject || nextClass.name || 'Название курса'}</h3>
+        {nextClass.teacher && (
+          <div className="schedule-next-class-teacher">{nextClass.teacher}</div>
+        )}
+        <div className="schedule-next-class-meta">
+          <span className="schedule-next-class-meta-item">
+            <span className="schedule-next-class-meta-icon" aria-hidden>🕐</span>
+            {timeStr}
+          </span>
+          <span className="schedule-next-class-meta-item">
+            <span className="schedule-next-class-meta-icon" aria-hidden>📍</span>
+            {roomStr}
+          </span>
+          <span className="schedule-next-class-meta-item">
+            <span className="schedule-next-class-meta-icon" aria-hidden>📄</span>
+            {typeStr}
+          </span>
         </div>
       </div>
     );
@@ -107,18 +132,13 @@ const ScheduleWidget = ({ block, apiService: apiServiceProp }) => {
     <div className="widget schedule-widget">
       <div className="widget-header">
         <h3 className="widget-title">📅 Ближайшее занятие</h3>
-        <button 
-          className="widget-more-btn"
-          onClick={() => navigate('/schedule')}
-        >
-          Все →
-        </button>
+        <button className="widget-more-btn" onClick={() => navigate('/schedule')}>Все →</button>
       </div>
       <div className="widget-content">
         <div className="schedule-next-class-card">
           <div className="schedule-next-class-row">
             <span className="schedule-icon schedule-icon-cap">🎓</span>
-            <span className="schedule-room">{formatRoom(nextClass.room || nextClass.location)}</span>
+            <span className="schedule-room">{roomStr}</span>
             <span className="schedule-time-range">
               {nextClass.time_start && nextClass.time_end 
                 ? `${nextClass.time_start} - ${nextClass.time_end}`
