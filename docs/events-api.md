@@ -104,6 +104,28 @@ GET https://<ваш-домен>/api/public/events?limit=10
 
 ---
 
+## Секреты GitHub (деплой на VPS)
+
+Если деплой идёт через **GitHub Actions** на VPS (workflow `deploy-vps.yml`), можно задать URL API мероприятий в **секретах репозитория** — они будут записываться на сервер при каждом деплое.
+
+1. В репозитории: **Settings → Secrets and variables → Actions**.
+2. Нажмите **New repository secret**.
+3. Добавьте секреты:
+   - **EVENTS_API_URL** — базовый URL вашего Public Events API, например `https://ваш-домен-ивентов.ru/api/public`.
+   - **EVENTS_BOT_LINK** (опционально) — ссылка на бота, например `https://t.me/event_ranepa_bot`.
+
+При деплое workflow записывает их в файл `backend/.env.events` на сервере. Бэкенд должен читать этот файл при старте (в systemd-юните указан `EnvironmentFile=/path/to/repo/backend/.env.events` — см. `deploy/max-university-backend.service`). Если юнит настраивали вручную, добавьте строку:
+
+```ini
+EnvironmentFile=/path/to/repo/backend/.env.events
+```
+
+и перезагрузите unit: `sudo systemctl daemon-reload && sudo systemctl restart max-university-backend`.
+
+**Важно:** файл `.env.events` создаётся только если секрет **EVENTS_API_URL** в GitHub задан. Если секрет не задан, файл не перезаписывается (старые значения на сервере сохраняются).
+
+---
+
 ## Где в MAX показываются мероприятия
 
 - **Хаб** — блок «Ближайшие события» (карточка первого мероприятия + кнопка «Записаться», при отсутствии данных — «Пока нет мероприятий»).

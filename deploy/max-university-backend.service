@@ -8,6 +8,7 @@
 #
 # Переменные EVENTS_API_URL и EVENTS_BOT_LINK можно задать в backend/.env.events
 # (создаётся при деплое из секретов GitHub) или здесь через Environment=.
+# Для ленты новостей добавьте: Environment="COLD_NEWS_FEED_URL=http://127.0.0.1:3001"
 
 [Unit]
 Description=Max University FastAPI Backend
@@ -20,6 +21,7 @@ Group=www
 WorkingDirectory=/path/to/repo/backend
 Environment="PATH=/path/to/repo/venv/bin"
 EnvironmentFile=/path/to/repo/backend/.env.events
+Environment="COLD_NEWS_FEED_URL=http://127.0.0.1:3001"
 ExecStart=/path/to/repo/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000
 Restart=always
 RestartSec=5
