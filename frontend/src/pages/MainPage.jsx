@@ -103,9 +103,11 @@ const MainPage = () => {
       )
     : feedPosts;
 
+  const firstName = displayName.split(' ')[0] || displayName;
+
   return (
     <div className="main-page">
-      <header className="main-header main-page-header" style={{ background: headerColor }}>
+      <header className="main-header main-page-header main-page-header--white">
         <div className="main-page-header-inner">
           <button
             type="button"
@@ -113,20 +115,21 @@ const MainPage = () => {
             onClick={handleProfileClick}
             aria-label="Профиль"
           >
-            <span className="main-page-avatar">
+            <span className="main-page-avatar main-page-avatar--shadow">
               {userAvatar ? (
                 <img src={userAvatar} alt="" />
               ) : (
                 <span className="main-page-avatar-initial" aria-hidden>{displayName.charAt(0).toUpperCase()}</span>
               )}
             </span>
-            <span className="main-page-greeting">
-              {getGreeting()}, {displayName.split(' ')[0] || displayName}
-            </span>
+            <div className="main-page-greeting-block">
+              <span className="main-page-greeting-line">{getGreeting()},</span>
+              <span className="main-page-greeting-name">{firstName}</span>
+            </div>
           </button>
           <button
             type="button"
-            className="main-page-search-btn main-page-search-btn-icon"
+            className="main-page-search-btn main-page-search-btn--dark"
             onClick={() => setSearchOpen(true)}
             aria-label="Поиск"
           >
@@ -154,29 +157,23 @@ const MainPage = () => {
               <ScheduleWidget variant="main" block={{ block_type: 'schedule', name: 'Расписание' }} apiService={apiService} />
             </div>
             <div className="main-page-widget-buttons">
-            <button
-              type="button"
-              className="main-page-widget-btn main-page-widget-qr"
-              onClick={() => setShowDigitalPass(true)}
-              aria-label="QR-код"
-            >
-              <span className="main-page-widget-btn-icon main-page-widget-btn-icon-svg">
+              <button
+                type="button"
+                className="main-page-widget-btn main-page-widget-btn--icon-only"
+                onClick={() => setShowDigitalPass(true)}
+                aria-label="QR-код"
+              >
                 <img src={icon('iconqr')} alt="" width={28} height={28} />
-              </span>
-              <span className="main-page-widget-btn-label">QR-код</span>
-            </button>
-            <a
-              href={EVENTS_BOT_LINK}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="main-page-widget-btn main-page-widget-events"
-              aria-label="Мероприятия"
-            >
-              <span className="main-page-widget-btn-icon main-page-widget-btn-icon-svg">
+              </button>
+              <a
+                href={EVENTS_BOT_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="main-page-widget-btn main-page-widget-btn--icon-only"
+                aria-label="Мероприятия"
+              >
                 <img src={icon('iconevent')} alt="" width={24} height={24} />
-              </span>
-              <span className="main-page-widget-btn-label">Мероприятия</span>
-            </a>
+              </a>
             </div>
           </div>
         </section>
