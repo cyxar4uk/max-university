@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useMAXBridge } from '../useMAXBridge.js';
 import apiService from '../api-service.js';
+import { getAvatarUrl } from '../utils/avatarUrl.js';
 import HubEventsWidget from '../Widgets/HubEventsWidget.jsx';
 
 /**
@@ -23,12 +24,14 @@ const HubPage = () => {
   const [feedOffset, setFeedOffset] = useState(0);
   const feedLimit = 20;
 
-  const currentUser = userInfo || user;
-  const userAvatar =
-    currentUser?.photo_url ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      (currentUser?.first_name || 'User') + ' ' + (currentUser?.last_name || '')
-    )}&background=0088CC&color=fff`;
+  const currentUser = userInfo || {
+    first_name: user.firstName,
+    last_name: user.lastName,
+    photo_url: user.photoUrl,
+    avatar_url: user.avatarUrl,
+    photo: user.photo,
+  };
+  const userAvatar = getAvatarUrl(currentUser);
 
   useEffect(() => {
     const loadSources = async () => {

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { store } from './store.js';
+import { setUserFromMAX } from './userSlice.js';
 import './styles.css';
 import apiService from './api-service.js';
 import MockModeNotification from './components/MockModeNotification.jsx';
@@ -42,9 +43,21 @@ function App() {
   useEffect(() => {
     // Suppress React Router future flags warnings
     window.__reactRouterVersion = 6;
-    // Инициализация MAX Bridge
+    // Инициализация MAX Bridge и синхронизация пользователя в Redux (для аватара и профиля)
     if (window.WebApp) {
       window.WebApp.ready();
+      const maxUser = window.WebApp.initDataUnsafe?.user;
+      if (maxUser) {
+        const role = localStorage.getItem('userRole') || null;
+        const universityId = parseInt(localStorage.getItem('universityId') || '1', 10);
+        const canChangeRole = localStorage.getItem('invitationCodeUsed') === 'true' ? false : true;
+        store.dispatch(setUserFromMAX({
+          user: maxUser,
+          role,
+          universityId,
+          canChangeRole,
+        }));
+      }
       console.log('MAX Bridge initialized');
       console.log('User:', window.WebApp.initDataUnsafe?.user);
       console.log('Start params:', window.WebApp.initDataUnsafe?.start_param);

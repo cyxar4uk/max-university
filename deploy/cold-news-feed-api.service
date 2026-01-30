@@ -1,0 +1,27 @@
+# systemd unit для cold_news Feed API (лента постов на порту 3001).
+# Установка на VPS:
+#   sudo cp deploy/cold-news-feed-api.service /etc/systemd/system/
+#   sudo sed -i "s|/path/to/repo|$(pwd)|g" /etc/systemd/system/cold-news-feed-api.service
+#   (создайте .env в services/cold-news с MONGOdb=...)
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable cold-news-feed-api
+#   sudo systemctl start cold-news-feed-api
+#
+# На бэкенде задайте COLD_NEWS_FEED_URL=http://127.0.0.1:3001
+
+[Unit]
+Description=Cold News Feed API (MAX Hub feed)
+After=network.target
+
+[Service]
+Type=simple
+User=www
+Group=www
+WorkingDirectory=/path/to/repo/services/cold-news
+EnvironmentFile=/path/to/repo/services/cold-news/.env
+ExecStart=/usr/bin/node feed-api.js
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

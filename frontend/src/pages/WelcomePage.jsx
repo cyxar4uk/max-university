@@ -127,7 +127,7 @@ const WelcomePage = ({ returnTo }) => {
       localStorage.setItem('maxUserId', String(userInfo.id));
       localStorage.setItem('invitationCodeUsed', 'true');
 
-      navigate(goAfterSuccess, { replace: true });
+      navigate(goAfterSuccess || '/home', { replace: true });
 
     } catch (error) {
       console.error('Invitation code error:', error);

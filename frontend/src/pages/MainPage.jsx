@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useMAXBridge } from '../useMAXBridge.js';
 import apiService from '../api-service.js';
+import { getAvatarUrl } from '../utils/avatarUrl.js';
 import ScheduleWidget from '../Widgets/ScheduleWidget.jsx';
 import DigitalPassWidget from '../Widgets/DigitalPassWidget.jsx';
 
@@ -27,12 +28,14 @@ const MainPage = () => {
   const [feedHasMore, setFeedHasMore] = useState(true);
   const feedLimit = 20;
 
-  const currentUser = userInfo || user;
-  const userAvatar =
-    currentUser?.photo_url ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      (currentUser?.first_name || 'User') + ' ' + (currentUser?.last_name || '')
-    )}&background=${(headerColor || '0088CC').replace('#', '')}&color=fff`;
+  const currentUser = userInfo || {
+    first_name: user.firstName,
+    last_name: user.lastName,
+    photo_url: user.photoUrl,
+    avatar_url: user.avatarUrl,
+    photo: user.photo,
+  };
+  const userAvatar = getAvatarUrl(currentUser, headerColor);
 
   useEffect(() => {
     const loadConfig = async () => {

@@ -66,4 +66,8 @@ jobs:
             git fetch origin
             git reset --hard origin/main
             (systemctl restart max-university-backend 2>/dev/null) || (cd "$REPO_PATH" && docker-compose up -d --build backend 2>/dev/null) || true
+            if [ -d "$REPO_PATH/services/cold-news" ]; then
+              (cd "$REPO_PATH/services/cold-news" && npm ci --omit=dev 2>/dev/null) || true
+              (systemctl restart cold-news-feed-api 2>/dev/null) || true
+            fi
             echo "Deploy done."

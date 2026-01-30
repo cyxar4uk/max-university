@@ -1,11 +1,22 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { useMAXBridge } from '../useMAXBridge.js';
+import { getAvatarUrl } from '../utils/avatarUrl.js';
 import UserSwitcher from '../UserSwitcher.jsx';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.user);
+  const { userInfo } = useMAXBridge();
+  const currentUser = userInfo || {
+    first_name: user.firstName,
+    last_name: user.lastName,
+    photo_url: user.photoUrl,
+    avatar_url: user.avatarUrl,
+    photo: user.photo,
+  };
+  const avatarUrl = getAvatarUrl(currentUser);
 
   const roleNames = {
     student: 'Студент',
@@ -35,7 +46,11 @@ const ProfilePage = () => {
 
       <div style={{ textAlign: 'center', marginBottom: '24px' }}>
         <div className="profile-avatar">
-          {user.firstName?.charAt(0) || '👤'}
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="" className="profile-avatar-img" />
+          ) : (
+            <span className="profile-avatar-initial">{user.firstName?.charAt(0) || '👤'}</span>
+          )}
         </div>
         <h2 className="profile-name">
           {user.firstName || 'Пользователь'} {user.lastName || ''}
