@@ -1194,12 +1194,13 @@ EVENTS_BOT_LINK = os.environ.get("EVENTS_BOT_LINK", "https://t.me/event_ranepa_b
 
 @app.get("/api/external/events")
 async def get_external_events(limit: Optional[int] = 10):
-    """Proxy to external events API for Hub/Home widgets. Returns list of events and bot_link."""
+    """Proxy to external events API (Public Events API). Returns list of events and bot_link."""
     if not EVENTS_API_URL:
         return {"events": [], "bot_link": EVENTS_BOT_LINK}
+    limit = min(limit or 10, 50)
     try:
         async with httpx.AsyncClient(timeout=8.0) as client:
-            r = await client.get(f"{EVENTS_API_URL}/events", params={"limit": limit or 10})
+            r = await client.get(f"{EVENTS_API_URL}/events", params={"limit": limit})
             r.raise_for_status()
             data = r.json()
             if isinstance(data, list):

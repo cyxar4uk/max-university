@@ -52,10 +52,11 @@ const HubEventsWidget = ({ limit = 5, compact = false, showCardLayout = false, s
   const firstEvent = hasEvents ? data.events[0] : null;
 
   if (showCardLayout && hasEvents && firstEvent) {
+    const registerLink = firstEvent.bot_link || data.bot_link;
     return (
       <div className="hub-events-widget hub-events-widget--card-layout">
         <a
-          href={data.bot_link}
+          href={registerLink}
           target="_blank"
           rel="noopener noreferrer"
           className="hub-event-hero-card"
