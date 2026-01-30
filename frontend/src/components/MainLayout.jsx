@@ -1,6 +1,9 @@
 import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 
+const baseUrl = typeof import.meta.env?.BASE_URL === 'string' ? import.meta.env.BASE_URL : '/';
+const icon = (name) => `${baseUrl}icons/${name}.svg`;
+
 /**
  * Layout with bottom navigation: Главная | Хаб | Учёба.
  * Wraps all main app screens after login.
@@ -42,7 +45,9 @@ const MainLayout = () => {
           onClick={() => handleNavTo('/home')}
           aria-label="Главная"
         >
-          <span className="nav-icon" aria-hidden>🏠</span>
+          <span className="nav-icon nav-icon-svg" aria-hidden>
+            <img src={icon('iconhome')} alt="" width={24} height={24} />
+          </span>
           <span className="nav-label">Главная</span>
         </button>
         <button
@@ -50,7 +55,9 @@ const MainLayout = () => {
           onClick={() => handleNavTo('/hub')}
           aria-label="Хаб"
         >
-          <span className="nav-icon" aria-hidden>@</span>
+          <span className="nav-icon nav-icon-svg" aria-hidden>
+            <img src={icon('iconhub')} alt="" width={24} height={24} />
+          </span>
           <span className="nav-label">Хаб</span>
         </button>
         <button
@@ -58,7 +65,9 @@ const MainLayout = () => {
           onClick={() => handleNavTo('/study')}
           aria-label="Учёба"
         >
-          <span className="nav-icon" aria-hidden>🎓</span>
+          <span className="nav-icon nav-icon-svg" aria-hidden>
+            <img src={icon('iconedu')} alt="" width={24} height={24} />
+          </span>
           <span className="nav-label">Учёба</span>
         </button>
       </nav>

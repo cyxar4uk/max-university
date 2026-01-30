@@ -2,21 +2,14 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useMAXBridge } from '../useMAXBridge.js';
-import { getAvatarUrl } from '../utils/avatarUrl.js';
+import { getDisplayUser } from '../utils/displayUser.js';
 import UserSwitcher from '../UserSwitcher.jsx';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.user);
   const { userInfo } = useMAXBridge();
-  const currentUser = userInfo || {
-    first_name: user.firstName,
-    last_name: user.lastName,
-    photo_url: user.photoUrl,
-    avatar_url: user.avatarUrl,
-    photo: user.photo,
-  };
-  const avatarUrl = getAvatarUrl(currentUser);
+  const { displayName, avatarUrl } = getDisplayUser(userInfo, user);
 
   const roleNames = {
     student: 'Студент',
@@ -49,11 +42,11 @@ const ProfilePage = () => {
           {avatarUrl ? (
             <img src={avatarUrl} alt="" className="profile-avatar-img" />
           ) : (
-            <span className="profile-avatar-initial">{user.firstName?.charAt(0) || '👤'}</span>
+            <span className="profile-avatar-initial">{displayName.charAt(0).toUpperCase() || '👤'}</span>
           )}
         </div>
         <h2 className="profile-name">
-          {user.firstName || 'Пользователь'} {user.lastName || ''}
+          {displayName}
         </h2>
         {user.role && (
           <p className="profile-role">

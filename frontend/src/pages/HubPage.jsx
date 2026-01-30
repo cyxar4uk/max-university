@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useMAXBridge } from '../useMAXBridge.js';
 import apiService from '../api-service.js';
-import { getAvatarUrl } from '../utils/avatarUrl.js';
+import { getDisplayUser } from '../utils/displayUser.js';
 import HubEventsWidget from '../Widgets/HubEventsWidget.jsx';
 
 /**
@@ -16,6 +16,7 @@ const HubPage = () => {
   const [headerColor] = useState(
     () => document.documentElement.style.getPropertyValue('--max-primary') || '#0088CC'
   );
+  const { avatarUrl: userAvatar } = getDisplayUser(userInfo, user, headerColor);
   const [feedPosts, setFeedPosts] = useState([]);
   const [feedTotal, setFeedTotal] = useState(0);
   const [sources, setSources] = useState([]);
@@ -23,15 +24,6 @@ const HubPage = () => {
   const [feedLoading, setFeedLoading] = useState(true);
   const [feedOffset, setFeedOffset] = useState(0);
   const feedLimit = 20;
-
-  const currentUser = userInfo || {
-    first_name: user.firstName,
-    last_name: user.lastName,
-    photo_url: user.photoUrl,
-    avatar_url: user.avatarUrl,
-    photo: user.photo,
-  };
-  const userAvatar = getAvatarUrl(currentUser);
 
   useEffect(() => {
     const loadSources = async () => {

@@ -19,15 +19,17 @@ const userSlice = createSlice({
   name: 'user',
   initialState,
   reducers: {
-    // Установка информации пользователя из MAX Bridge
+    // Установка информации пользователя из MAX Bridge (документация: dev.max.ru/docs/webapps/bridge)
+    // user приходит в snake_case: first_name, last_name, photo_url; поддерживаем и camelCase
     setUserFromMAX: (state, action) => {
       const { user, role, universityId, canChangeRole } = action.payload;
+      if (!user) return;
       state.maxUserId = user.id;
-      state.firstName = user.first_name;
-      state.lastName = user.last_name;
-      state.username = user.username;
-      state.photoUrl = user.photo_url;
-      state.languageCode = user.language_code;
+      state.firstName = user.first_name ?? user.firstName ?? '';
+      state.lastName = user.last_name ?? user.lastName ?? '';
+      state.username = user.username ?? '';
+      state.photoUrl = user.photo_url ?? user.photoUrl ?? user.avatar_url ?? user.avatarUrl ?? user.photo ?? null;
+      state.languageCode = user.language_code ?? user.languageCode ?? null;
       state.role = role;
       state.universityId = universityId;
       state.canChangeRole = canChangeRole !== undefined ? canChangeRole : true;

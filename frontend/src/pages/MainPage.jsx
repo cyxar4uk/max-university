@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useMAXBridge } from '../useMAXBridge.js';
 import apiService from '../api-service.js';
-import { getAvatarUrl } from '../utils/avatarUrl.js';
+import { getDisplayUser } from '../utils/displayUser.js';
 import ScheduleWidget from '../Widgets/ScheduleWidget.jsx';
 import DigitalPassWidget from '../Widgets/DigitalPassWidget.jsx';
 
 const EVENTS_BOT_LINK = 'https://t.me/event_ranepa_bot';
+const baseUrl = typeof import.meta.env?.BASE_URL === 'string' ? import.meta.env.BASE_URL : '/';
+const icon = (name) => `${baseUrl}icons/${name}.svg`;
 
 /**
  * Главная: хедер (аватар, поиск), виджеты (расписание + QR + мероприятия),
@@ -18,6 +20,7 @@ const MainPage = () => {
   const user = useSelector((state) => state.user);
   const { userInfo } = useMAXBridge();
   const [headerColor, setHeaderColor] = useState('#0088CC');
+  const { displayName, avatarUrl: userAvatar } = getDisplayUser(userInfo, user, headerColor);
   const [showDigitalPass, setShowDigitalPass] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,15 +30,6 @@ const MainPage = () => {
   const [feedLoading, setFeedLoading] = useState(false);
   const [feedHasMore, setFeedHasMore] = useState(true);
   const feedLimit = 20;
-
-  const currentUser = userInfo || {
-    first_name: user.firstName,
-    last_name: user.lastName,
-    photo_url: user.photoUrl,
-    avatar_url: user.avatarUrl,
-    photo: user.photo,
-  };
-  const userAvatar = getAvatarUrl(currentUser, headerColor);
 
   useEffect(() => {
     const loadConfig = async () => {
@@ -111,16 +105,20 @@ const MainPage = () => {
             onClick={handleProfileClick}
             aria-label="Профиль"
           >
-            <img src={userAvatar} alt="" />
+            {userAvatar ? (
+              <img src={userAvatar} alt="" />
+            ) : (
+              <span className="main-page-avatar-initial" aria-hidden>{displayName.charAt(0).toUpperCase()}</span>
+            )}
           </button>
           <div className="main-page-header-center" />
           <button
             type="button"
-            className="main-page-search-btn"
+            className="main-page-search-btn main-page-search-btn-icon"
             onClick={() => setSearchOpen(true)}
             aria-label="Поиск"
           >
-            🔍
+            <img src={icon('iconsearch')} alt="" width={22} height={22} />
           </button>
         </div>
       </header>
@@ -138,7 +136,9 @@ const MainPage = () => {
               onClick={() => setShowDigitalPass(true)}
               aria-label="QR-код"
             >
-              <span className="main-page-widget-btn-icon">📱</span>
+              <span className="main-page-widget-btn-icon main-page-widget-btn-icon-svg">
+                <img src={icon('iconqr')} alt="" width={28} height={28} />
+              </span>
               <span className="main-page-widget-btn-label">QR-код</span>
             </button>
             <a
@@ -148,7 +148,9 @@ const MainPage = () => {
               className="main-page-widget-btn main-page-widget-events"
               aria-label="Мероприятия"
             >
-              <span className="main-page-widget-btn-icon">🎉</span>
+              <span className="main-page-widget-btn-icon main-page-widget-btn-icon-svg">
+                <img src={icon('iconevent')} alt="" width={24} height={24} />
+              </span>
               <span className="main-page-widget-btn-label">Мероприятия</span>
             </a>
           </div>
