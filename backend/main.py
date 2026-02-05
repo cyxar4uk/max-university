@@ -28,13 +28,19 @@ app = FastAPI(title="Digital University MAX Bot + Mini-App", version="2.0.0")
 async def startup_event():
     """Инициализация баз данных при старте приложения"""
     import logging
+    log = logging.getLogger("uvicorn.error")
     database.init_databases()  # может подгрузить .env.database и выставить USE_PG
     if getattr(database, "USE_PG", False):
-        logging.getLogger("uvicorn.error").info("Database: PostgreSQL (users)")
+        log.info("Database: PostgreSQL (users)")
     elif os.environ.get("DATABASE_URL"):
-        logging.getLogger("uvicorn.error").warning("Database: SQLite — установите psycopg2-binary в venv: pip install psycopg2-binary")
+        log.warning("Database: SQLite — установите psycopg2-binary в venv: pip install psycopg2-binary")
     else:
-        logging.getLogger("uvicorn.error").info("Database: SQLite only (DATABASE_URL not set)")
+        log.info("Database: SQLite only (DATABASE_URL not set)")
+    # Проверка токена бота (без вывода значения): смотри в journalctl или проверь в консоли через curl /api/health
+    if MAX_BOT_TOKEN:
+        log.info("MAX_BOT_TOKEN: loaded (from env or .env.bot)")
+    else:
+        log.warning("MAX_BOT_TOKEN: not set (create backend/.env.bot with MAX_BOT_TOKEN=...)")
 
 # CORS
 app.add_middleware(
@@ -772,7 +778,8 @@ def get_user_id_from_headers(x_max_user_id: Optional[str] = Header(None)) -> int
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "healthy"}
+    """Проверка работы сервиса; bot_token_loaded — читается ли MAX_BOT_TOKEN из .env.bot/env."""
+    return {"status": "healthy", "bot_token_loaded": bool(MAX_BOT_TOKEN)}
 
 @app.post("/api/users/auth")
 async def authenticate_user(user: User, x_max_init_data: Optional[str] = Header(None)):
