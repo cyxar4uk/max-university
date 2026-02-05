@@ -10,7 +10,7 @@ for name in (".env.events", ".env.database", ".env", ".env.bot"):
         load_dotenv(p)
     load_dotenv(Path.cwd() / name)  # на сервере WorkingDirectory=backend, cwd тоже подойдёт
 
-from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
@@ -127,32 +127,39 @@ class MAXBotAPI:
         text: str, 
         reply_markup: Optional[Dict] = None
     ):
-        """Отправка сообщения пользователю (MAX: клавиатура через attachments, см. dev.max.ru/docs-api)."""
-        async with httpx.AsyncClient() as client:
+        """Отправка сообщения в MAX: пробуем platform-api и api.max.ru/bot, с chat_id и user_id."""
+        async with httpx.AsyncClient(timeout=15.0) as client:
             attachments = _reply_markup_to_max_attachments(reply_markup) if reply_markup else []
-            payload = {
-                "chat_id": user_id,
-                "text": text,
-                "format": "markdown",
-            }
-            if attachments:
-                payload["attachments"] = attachments
-            response = await client.post(
-                f"{self.base_url}/messages",
-                headers=self.headers,
-                json=payload
-            )
-            if response.status_code >= 400:
-                payload_fb = {"user_id": user_id, "text": text}
-                if reply_markup:
-                    payload_fb["reply_markup"] = reply_markup
+            # 1) platform-api.max.ru (документация MAX)
+            for key in ("chat_id", "user_id"):
+                payload = {key: user_id, "text": text, "format": "markdown"}
+                if attachments:
+                    payload["attachments"] = attachments
+                try:
+                    r = await client.post(
+                        f"{self.base_url}/messages",
+                        headers=self.headers,
+                        json=payload
+                    )
+                    if r.status_code in (200, 201):
+                        return r.json() if r.content else {}
+                except Exception:
+                    pass
+            # 2) старый endpoint api.max.ru/bot/sendMessage
+            payload_fb = {"user_id": user_id, "text": text}
+            if reply_markup:
+                payload_fb["reply_markup"] = reply_markup
+            try:
                 r2 = await client.post(
                     "https://api.max.ru/bot/sendMessage",
                     headers=self.headers,
                     json=payload_fb
                 )
-                return r2.json()
-            return response.json()
+                if r2.status_code in (200, 201):
+                    return r2.json() if r2.content else {}
+            except Exception:
+                pass
+            return {}
     
     async def answer_callback_query(
         self, 
@@ -609,82 +616,124 @@ async def handle_back_to_menu(user_id: int, callback_query_id: str, message_id: 
 
 # ============ WEBHOOK ENDPOINT ============
 
+def _parse_webhook_body(body: dict):
+    """
+    Извлекает user_id, text и user_data из тела вебхука MAX.
+    Поддерживает разные форматы: message.from.id, message.body.text, body.sender, chat.id и т.д.
+    """
+    user_id = None
+    text = ""
+    user_data = {}
+    message = body.get("message") or body.get("msg") or body
+    if message and isinstance(message, dict):
+        from_obj = message.get("from") or message.get("sender") or {}
+        if isinstance(from_obj, dict):
+            user_id = from_obj.get("id") or from_obj.get("user_id")
+            user_data = from_obj
+        elif isinstance(from_obj, (int, float)):
+            user_id = int(from_obj)
+        body_inner = message.get("body")
+        text = message.get("text") or (body_inner.get("text") if isinstance(body_inner, dict) else None) or ""
+        if not user_id and isinstance(body_inner, dict):
+            user_id = body_inner.get("sender_id") or body_inner.get("user_id")
+        if not user_id:
+            user_id = body.get("user_id") or body.get("sender_id") or (body.get("chat", {}) or {}).get("id")
+    if user_id is not None:
+        try:
+            user_id = int(user_id)
+        except (TypeError, ValueError):
+            user_id = None
+    text = (text or "").strip()
+    return user_id, text, user_data
+
+
 @app.post("/api/bot/webhook")
-async def bot_webhook(update: BotUpdate, background_tasks: BackgroundTasks):
+async def bot_webhook(request: Request):
     """
-    Вебхук для получения обновлений от MAX Bot
+    Вебхук для обновлений от MAX Bot. Принимает любой JSON, извлекает user_id и text,
+    обрабатывает команды и на неизвестный текст отвечает «Не знаю такой команды».
     """
-    
     try:
-        # Обработка обычного сообщения
-        if update.message:
-            message = update.message
-            user_id = message.get("from", {}).get("id")
-            text = message.get("text", "")
-            user_data = message.get("from", {})
-            
-            # Обработка команд
-            if text.startswith("/start"):
+        body = await request.json()
+    except Exception:
+        body = {}
+    if not body:
+        return {"status": "ok"}
+
+    try:
+        # ----- Входящее сообщение (текст) -----
+        user_id, text, user_data = _parse_webhook_body(body)
+        message = body.get("message") or body.get("msg") or body
+
+        if user_id and text is not None:
+            # Нормализуем: команда может приходить с или без слэша
+            cmd = (text.split()[0] if text else "").lower()
+            if not cmd.startswith("/"):
+                cmd = "/" + cmd
+
+            if cmd == "/start":
                 await handle_start_command(user_id, user_data)
-            
-            elif text.startswith("/help"):
+                return {"status": "ok"}
+            if cmd == "/help":
                 await handle_help_command(user_id)
-            
-            elif text.startswith("/schedule"):
-                role = users_db.get(user_id, {}).get("role", "student")
+                return {"status": "ok"}
+            if cmd == "/schedule":
                 await bot_api.send_message(
                     user_id=user_id,
                     text="📅 Расписание",
                     reply_markup=get_quick_actions_keyboard("schedule")
                 )
-            
-            elif text.startswith("/profile"):
+                return {"status": "ok"}
+            if cmd == "/profile":
                 await bot_api.send_message(
                     user_id=user_id,
                     text="👤 Профиль",
                     reply_markup=get_quick_actions_keyboard("profile")
                 )
-        
-        # Обработка callback (MAX: callback_query или message_callback)
-        callback = update.callback_query or update.message_callback
-        if callback:
-            callback_query_id = callback.get("id") or callback.get("query_id") or ""
-            from_info = callback.get("from", {}) or callback.get("user", {})
-            user_id = from_info.get("id") or from_info.get("user_id")
-            callback_data = str(callback.get("data") or callback.get("payload") or "")
-            msg = callback.get("message", {})
-            message_id = msg.get("message_id") or msg.get("mid") or msg.get("id")
-            if not user_id or not callback_data:
                 return {"status": "ok"}
-            
-            # Обработка выбора роли
-            if callback_data.startswith("role_"):
-                role = callback_data.split("_", 1)[1]
-                await handle_role_selection(user_id, callback_query_id, role, message_id)
-            
-            # Обработка выбора блока
-            elif callback_data.startswith("block_"):
-                block = callback_data.split("_")[1]
-                await handle_block_selection(user_id, callback_query_id, block, message_id)
-            
-            # Возврат в меню
-            elif callback_data == "back_to_menu":
-                await handle_back_to_menu(user_id, callback_query_id, message_id)
-            
-            # Быстрые действия
-            elif callback_data.startswith("schedule_"):
-                action = callback_data.split("_")[1]
-                # Здесь логика для каждого действия
-                await bot_api.answer_callback_query(
-                    callback_query_id=callback_query_id,
-                    text=f"Действие: {action}"
-                )
-        
+
+            # Любой другой текст — отвечаем, что не знаем
+            await bot_api.send_message(
+                user_id=user_id,
+                text="Я не знаю такой команды.\n\nИспользуйте /start или /help."
+            )
+            return {"status": "ok"}
+
+        # ----- Callback (нажатие inline-кнопки): callback_query или message_callback -----
+        callback = body.get("callback_query") or body.get("message_callback")
+        if callback and isinstance(callback, dict):
+            callback_query_id = callback.get("id") or callback.get("query_id") or ""
+            from_info = callback.get("from") or callback.get("user") or {}
+            c_user_id = from_info.get("id") or from_info.get("user_id")
+            callback_data = str(callback.get("data") or callback.get("payload") or "")
+            msg = callback.get("message") or {}
+            message_id = msg.get("message_id") or msg.get("mid") or msg.get("id")
+            try:
+                c_user_id = int(c_user_id) if c_user_id is not None else None
+            except (TypeError, ValueError):
+                c_user_id = None
+            if c_user_id and callback_data:
+                if callback_data.startswith("role_"):
+                    role = callback_data.split("_", 1)[1]
+                    await handle_role_selection(c_user_id, callback_query_id, role, message_id)
+                elif callback_data.startswith("block_"):
+                    block = callback_data.split("_")[1]
+                    await handle_block_selection(c_user_id, callback_query_id, block, message_id)
+                elif callback_data == "back_to_menu":
+                    await handle_back_to_menu(c_user_id, callback_query_id, message_id)
+                elif callback_data.startswith("schedule_"):
+                    action = callback_data.split("_")[1]
+                    await bot_api.answer_callback_query(
+                        callback_query_id=callback_query_id,
+                        text=f"Действие: {action}"
+                    )
+
         return {"status": "ok"}
-    
     except Exception as e:
-        print(f"Error processing update: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Bot webhook error: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"status": "ok"}
 
 # ============ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ============
 
