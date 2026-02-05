@@ -2,7 +2,7 @@ export const MOCK_FEED_POSTS = [
   {
     id: 'mincifra-1',
     text: 'В «белый список» включены новые сервисы',
-    date: '2024-01-16T09:00:00.000Z',
+    date: '2024-02-05T09:00:00.000Z',
     channel: 'Минцифры',
     channelUsername: 'mincifra',
     channelId: 'manual',
@@ -13,7 +13,7 @@ export const MOCK_FEED_POSTS = [
   {
     id: 'mincifra-2',
     text: 'В 2025 году более 5,4 млн абонентов сменили оператора, сохранив свой номер',
-    date: '2024-01-16T09:05:00.000Z',
+    date: '2024-02-05T09:05:00.000Z',
     channel: 'Минцифры',
     channelUsername: 'mincifra',
     channelId: 'manual',
@@ -24,7 +24,7 @@ export const MOCK_FEED_POSTS = [
   {
     id: 'mincifra-3',
     text: 'ИТ-специалисты могут подать заявление на отсрочку',
-    date: '2024-01-16T09:10:00.000Z',
+    date: '2024-02-05T09:10:00.000Z',
     channel: 'Минцифры',
     channelUsername: 'mincifra',
     channelId: 'manual',
@@ -35,7 +35,7 @@ export const MOCK_FEED_POSTS = [
   {
     id: 'academy-1',
     text: 'Стартовал первый в этом году поток программы «Социальные координаторы»',
-    date: '2024-01-16T10:30:00.000Z',
+    date: '2024-02-05T10:30:00.000Z',
     channel: 'Президентская академия. Новости',
     channelUsername: 'ranepa_news',
     channelId: 'manual',
@@ -46,7 +46,7 @@ export const MOCK_FEED_POSTS = [
   {
     id: 'moscow-1',
     text: 'Московская музейная неделя',
-    date: '2024-01-16T11:00:00.000Z',
+    date: '2024-02-05T11:00:00.000Z',
     channel: 'Город Москва',
     channelUsername: 'moscow',
     channelId: 'manual',

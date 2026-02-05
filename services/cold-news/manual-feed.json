@@ -7,7 +7,7 @@
     {
       "id": "manual-1",
       "text": "Здесь можно временно вручную подставить текст поста для ленты.",
-      "date": "2024-01-15T10:00:00.000Z",
+      "date": "2024-02-05T10:00:00.000Z",
       "channel": "Пример канала",
       "channelUsername": "example_channel_1",
       "channelId": "manual",
@@ -18,7 +18,7 @@
     {
       "id": "manual-mincifra-1",
       "text": "В «белый список» включены новые сервисы",
-      "date": "2024-01-16T09:00:00.000Z",
+      "date": "2024-02-05T09:00:00.000Z",
       "channel": "Минцифры",
       "channelUsername": "mincifra",
       "channelId": "manual",
@@ -29,7 +29,7 @@
     {
       "id": "manual-mincifra-2",
       "text": "В 2025 году более 5,4 млн абонентов сменили оператора, сохранив свой номер",
-      "date": "2024-01-16T09:05:00.000Z",
+      "date": "2024-02-05T09:05:00.000Z",
       "channel": "Минцифры",
       "channelUsername": "mincifra",
       "channelId": "manual",
@@ -40,7 +40,7 @@
     {
       "id": "manual-mincifra-3",
       "text": "ИТ-специалисты могут подать заявление на отсрочку",
-      "date": "2024-01-16T09:10:00.000Z",
+      "date": "2024-02-05T09:10:00.000Z",
       "channel": "Минцифры",
       "channelUsername": "mincifra",
       "channelId": "manual",
