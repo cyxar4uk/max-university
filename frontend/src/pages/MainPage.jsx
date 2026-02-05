@@ -6,6 +6,8 @@ import apiService from '../api-service.js';
 import { getDisplayUser } from '../utils/displayUser.js';
 import ScheduleWidget from '../Widgets/ScheduleWidget.jsx';
 import DigitalPassWidget from '../Widgets/DigitalPassWidget.jsx';
+import StoriesViewer from '../components/StoriesViewer.jsx';
+import { MOCK_STORIES } from '../data/mockStories.js';
 
 const EVENTS_BOT_LINK = 'https://t.me/event_ranepa_bot';
 const baseUrl = typeof import.meta.env?.BASE_URL === 'string' ? import.meta.env.BASE_URL : '/';
@@ -37,6 +39,7 @@ const MainPage = () => {
   const [feedOffset, setFeedOffset] = useState(0);
   const [feedLoading, setFeedLoading] = useState(false);
   const [feedHasMore, setFeedHasMore] = useState(true);
+  const [storiesViewerIndex, setStoriesViewerIndex] = useState(null);
   const feedLimit = 20;
 
   useEffect(() => {
@@ -182,10 +185,24 @@ const MainPage = () => {
         <section className="main-page-stories">
           <h2 className="main-page-section-title">Актуальные истории</h2>
           <div className="main-page-stories-track">
-            <div className="main-page-story main-page-story-add">+</div>
-            <div className="main-page-story main-page-story-placeholder" />
-            <div className="main-page-story main-page-story-placeholder" />
-            <div className="main-page-story main-page-story-placeholder" />
+            <div className="main-page-story main-page-story-add" aria-hidden="true">+</div>
+            {MOCK_STORIES.map((story, index) => (
+              <button
+                key={story.id}
+                type="button"
+                className={`main-page-story-card ${index < 2 ? 'main-page-story-card--gradient' : ''}`}
+                onClick={() => setStoriesViewerIndex(index)}
+              >
+                <div className="main-page-story-card-preview">
+                  {story.avatarUrl ? (
+                    <img src={story.avatarUrl} alt="" />
+                  ) : (
+                    (story.authorName || '?').charAt(0).toUpperCase()
+                  )}
+                </div>
+                <span className="main-page-story-card-name">{story.authorName}</span>
+              </button>
+            ))}
           </div>
         </section>
 
@@ -274,6 +291,15 @@ const MainPage = () => {
           </div>
           <div className="main-page-search-backdrop" onClick={() => setSearchOpen(false)} />
         </div>
+      )}
+
+      {/* Просмотр сторис */}
+      {storiesViewerIndex !== null && (
+        <StoriesViewer
+          stories={MOCK_STORIES}
+          startStoryIndex={storiesViewerIndex}
+          onClose={() => setStoriesViewerIndex(null)}
+        />
       )}
 
       {/* Цифровой пропуск (QR) */}

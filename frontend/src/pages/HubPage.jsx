@@ -6,6 +6,8 @@ import apiService from '../api-service.js';
 import { getDisplayUser } from '../utils/displayUser.js';
 import HubEventsWidget from '../Widgets/HubEventsWidget.jsx';
 import FeedSourcesModal, { getStoredSources, setStoredSources } from '../components/FeedSourcesModal.jsx';
+import StoriesViewer from '../components/StoriesViewer.jsx';
+import { MOCK_STORIES } from '../data/mockStories.js';
 
 const baseUrl = typeof import.meta.env?.BASE_URL === 'string' ? import.meta.env.BASE_URL : '/';
 const icon = (name) => `${baseUrl}icons/${name}.svg`;
@@ -23,6 +25,7 @@ const HubPage = () => {
   const [sources, setSources] = useState([]);
   const [selectedSources, setSelectedSources] = useState(getStoredSources);
   const [sourcesModalOpen, setSourcesModalOpen] = useState(false);
+  const [storiesViewerIndex, setStoriesViewerIndex] = useState(null);
   const [feedLoading, setFeedLoading] = useState(true);
   const [feedOffset, setFeedOffset] = useState(0);
   const feedLimit = 20;
@@ -110,10 +113,22 @@ const HubPage = () => {
             )}
           </button>
           <div className="hub-header-stories">
-            <div className="hub-header-story hub-header-story--add">+</div>
-            <div className="hub-header-story hub-header-story--gradient" />
-            <div className="hub-header-story hub-header-story--gradient" />
-            <div className="hub-header-story hub-header-story--gradient" />
+            <div className="hub-header-story hub-header-story--add" aria-hidden="true">+</div>
+            {MOCK_STORIES.slice(0, 3).map((story, index) => (
+              <button
+                key={story.id}
+                type="button"
+                className="hub-header-story hub-header-story--gradient hub-header-story--btn"
+                onClick={() => setStoriesViewerIndex(index)}
+                title={story.authorName}
+              >
+                {story.avatarUrl ? (
+                  <img src={story.avatarUrl} alt="" />
+                ) : (
+                  <span>{(story.authorName || '?').charAt(0)}</span>
+                )}
+              </button>
+            ))}
           </div>
           <button type="button" className="hub-header-search" aria-label="Поиск">
             <img src={icon('iconsearch')} alt="" width={22} height={22} />
@@ -203,6 +218,14 @@ const HubPage = () => {
           </div>
         </section>
       </main>
+
+      {storiesViewerIndex !== null && (
+        <StoriesViewer
+          stories={MOCK_STORIES}
+          startStoryIndex={storiesViewerIndex}
+          onClose={() => setStoriesViewerIndex(null)}
+        />
+      )}
 
       <FeedSourcesModal
         isOpen={sourcesModalOpen}
