@@ -35,6 +35,12 @@ npm ci --production=false
 npm run build
 echo "Frontend build done."
 
+# 2.5 Установить/обновить зависимости бэкенда (venv)
+if [ -d "$REPO_ROOT/venv" ] && [ -f "$BACKEND_DIR/requirements.txt" ]; then
+  "$REPO_ROOT/venv/bin/pip" install -r "$BACKEND_DIR/requirements.txt" -q
+  echo "Backend deps updated."
+fi
+
 # 3. Разместить статику в корень сайта
 echo "Publishing to $WWW_ROOT..."
 mkdir -p "$WWW_ROOT"

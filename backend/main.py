@@ -28,11 +28,13 @@ app = FastAPI(title="Digital University MAX Bot + Mini-App", version="2.0.0")
 async def startup_event():
     """Инициализация баз данных при старте приложения"""
     import logging
+    database.init_databases()  # может подгрузить .env.database и выставить USE_PG
     if getattr(database, "USE_PG", False):
         logging.getLogger("uvicorn.error").info("Database: PostgreSQL (users)")
+    elif os.environ.get("DATABASE_URL"):
+        logging.getLogger("uvicorn.error").warning("Database: SQLite — установите psycopg2-binary в venv: pip install psycopg2-binary")
     else:
-        logging.getLogger("uvicorn.error").info("Database: SQLite only (DATABASE_URL not set or psycopg2 missing)")
-    database.init_databases()
+        logging.getLogger("uvicorn.error").info("Database: SQLite only (DATABASE_URL not set)")
 
 # CORS
 app.add_middleware(
