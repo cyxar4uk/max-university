@@ -9,6 +9,7 @@ import FeedSourcesModal, { getStoredSources, setStoredSources } from '../compone
 import StoriesViewer from '../components/StoriesViewer.jsx';
 import AppHeader from '../components/AppHeader.jsx';
 import { MOCK_STORIES } from '../mockStories.js';
+import { MOCK_FEED_POSTS } from '../mockFeed.js';
 
 const baseUrl = typeof import.meta.env?.BASE_URL === 'string' ? import.meta.env.BASE_URL : '/';
 const icon = (name) => `${baseUrl}icons/${name}.svg`;
@@ -57,15 +58,22 @@ const HubPage = () => {
       const data = await apiService.getHubFeed(params);
       const posts = data.posts || [];
       const total = data.total ?? 0;
+      const fallbackPosts = !append && posts.length === 0 ? MOCK_FEED_POSTS : [];
+      const nextPosts = fallbackPosts.length ? fallbackPosts : posts;
+      const nextTotal = fallbackPosts.length ? fallbackPosts.length : total;
       if (append) {
         setFeedPosts((prev) => [...prev, ...posts]);
       } else {
-        setFeedPosts(posts);
+        setFeedPosts(nextPosts);
       }
-      setFeedOffset((append ? feedOffset : 0) + posts.length);
-      setFeedTotal(total);
+      setFeedOffset((append ? feedOffset : 0) + nextPosts.length);
+      setFeedTotal(nextTotal);
     } catch (e) {
-      if (!append) setFeedPosts([]);
+      if (!append) {
+        setFeedPosts(MOCK_FEED_POSTS);
+        setFeedOffset(MOCK_FEED_POSTS.length);
+        setFeedTotal(MOCK_FEED_POSTS.length);
+      }
     } finally {
       setFeedLoading(false);
     }

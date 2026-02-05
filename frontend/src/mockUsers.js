@@ -40,6 +40,16 @@ export const mockUsers = {
     role: 'teacher',
     university_id: 1
   },
+  parent: {
+    id: 10006,
+    first_name: 'Ольга',
+    last_name: 'Иванова',
+    username: 'olga_parent',
+    photo_url: null,
+    language_code: 'ru',
+    role: 'parent',
+    university_id: 1
+  },
   admin: {
     id: 10004,
     first_name: 'Анна',
@@ -61,4 +71,3 @@ export const getMockUserByRole = (role) => {
 export const getAllMockUsers = () => {
   return Object.values(mockUsers);
 };
-
