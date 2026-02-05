@@ -7,7 +7,7 @@ import { getDisplayUser } from '../utils/displayUser.js';
 import HubEventsWidget from '../Widgets/HubEventsWidget.jsx';
 import FeedSourcesModal, { getStoredSources, setStoredSources } from '../components/FeedSourcesModal.jsx';
 import StoriesViewer from '../components/StoriesViewer.jsx';
-import { MOCK_STORIES } from '../data/mockStories.js';
+import { MOCK_STORIES } from '../mockStories.js';
 
 const baseUrl = typeof import.meta.env?.BASE_URL === 'string' ? import.meta.env.BASE_URL : '/';
 const icon = (name) => `${baseUrl}icons/${name}.svg`;

@@ -7,7 +7,7 @@ import { getDisplayUser } from '../utils/displayUser.js';
 import ScheduleWidget from '../Widgets/ScheduleWidget.jsx';
 import DigitalPassWidget from '../Widgets/DigitalPassWidget.jsx';
 import StoriesViewer from '../components/StoriesViewer.jsx';
-import { MOCK_STORIES } from '../data/mockStories.js';
+import { MOCK_STORIES } from '../mockStories.js';
 
 const EVENTS_BOT_LINK = 'https://t.me/event_ranepa_bot';
 const baseUrl = typeof import.meta.env?.BASE_URL === 'string' ? import.meta.env.BASE_URL : '/';
