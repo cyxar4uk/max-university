@@ -31,6 +31,32 @@ except Exception:
 DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 USE_PG = bool(DATABASE_URL and psycopg2)
 
+
+def _load_env_database():
+    """Подгрузить DATABASE_URL из backend/.env.database (без зависимости от dotenv/порядка импортов)."""
+    global DATABASE_URL, USE_PG
+    if DATABASE_URL:
+        return
+    try:
+        from pathlib import Path
+        p = Path(__file__).resolve().parent / ".env.database"
+        if p.is_file():
+            for line in p.read_text().splitlines():
+                line = line.strip()
+                if line.startswith("DATABASE_URL="):
+                    val = line.split("=", 1)[1].strip()
+                    if val.startswith("'") and val.endswith("'"):
+                        val = val[1:-1]
+                    elif val.startswith('"') and val.endswith('"'):
+                        val = val[1:-1]
+                    if val:
+                        os.environ["DATABASE_URL"] = val
+                        DATABASE_URL = val
+                        USE_PG = bool(psycopg2)
+                        return
+    except Exception:
+        pass
+
 # Путь к директории с базами данных
 DB_DIR = "data"
 USERS_DB_PATH = os.path.join(DB_DIR, "users.db")
@@ -52,6 +78,7 @@ def init_databases():
 
 def init_users_db():
     """Инициализация базы данных пользователей (SQLite и при наличии DATABASE_URL — PostgreSQL)."""
+    _load_env_database()
     conn = sqlite3.connect(USERS_DB_PATH)
     cursor = conn.cursor()
     
