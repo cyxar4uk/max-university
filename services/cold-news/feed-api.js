@@ -7,6 +7,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import { DEFAULT_CHANNELS } from './channels.config.js';
 
 dotenv.config();
 
@@ -31,20 +32,6 @@ const NewsPostSchema = new mongoose.Schema({
 }, { collection: 'news_posts' });
 
 const NewsPost = mongoose.models.newsPost || mongoose.model('newsPost', NewsPostSchema, 'news_posts');
-
-const DEFAULT_CHANNELS = [
-  'CDTOonline',
-  'mainranepa',
-  'ranepa_im',
-  'ranepa_science',
-  'pers_conf',
-  'gspmranepa',
-  'ranepa_regions',
-  'akomissarov2022',
-  'Emit_ranepa',
-  'ec_dep_ranepa',
-  'PrioritiesRanepa',
-];
 
 async function connectDb() {
   if (!MONGO_URI) return;

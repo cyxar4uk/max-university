@@ -3,6 +3,7 @@ import { TelegramClient } from 'telegram';
 import { Api } from 'telegram/tl/index.js';
 import mongoose from 'mongoose';
 import UserTheme from './Them_model.js';
+import { DEFAULT_CHANNELS } from './channels.config.js';
 import { PostModels, startMonitoring, searchChannel , searchMessages} from './components/receiving_post.js';
 import { initializeUser } from './components/receiving_post.js';
 import { client } from './components/receiving_post.js';
@@ -254,20 +255,6 @@ bot.onText(/^🔎Поиск постов$/, async (msg) => {
     stop_btn
   );
 });
-const DEFAULT_CHANNELS = [
-  'CDTOonline',
-  'mainranepa',
-  'ranepa_im',
-  'ranepa_science',
-  'pers_conf',
-  'gspmranepa',
-  'ranepa_regions',
-  'akomissarov2022',
-  'Emit_ranepa',
-  'ec_dep_ranepa',
-  'PrioritiesRanepa'
-];
-
 bot.onText(/^Посмотреть каналы$/, async (msg) => {
   try {
     const user = await getOrCreateUser(msg.from.id);

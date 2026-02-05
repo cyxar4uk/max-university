@@ -9,23 +9,9 @@ import qs from "qs";
 import { v4 as uuidv4 } from 'uuid';
 import { bot } from '../index.js';
 import dotenv from 'dotenv';
+import { DEFAULT_CHANNELS } from '../channels.config.js';
 
 dotenv.config();
-
-const DEFAULT_CHANNELS = [
-  'CDTOonline',
-  'mainranepa',
-  'ranepa_im',
-  'ranepa_science',
-  'pers_conf',
-  'gspmranepa',
-  'ranepa_regions',
-  'akomissarov2022',
-  'Emit_ranepa',
-  'ec_dep_ranepa',
-  'Emit_ranepa',
-  'PrioritiesRanepa'
-];
 
 
 const apiId = 21571955;
@@ -582,8 +568,7 @@ export async function startMonitoring() {
 
 export async function initializeUser(telegramId) {
   try {
-    await mongoose.connect('mongodb+srv://vladmorozov2020:Nevskifront208@moroz.gjylj0v.mongodb.net/teleg_news?retryWrites=true&w=majority&appName=Moroz');
-
+    // MongoDB подключается в index.js из process.env.MONGOdb; здесь только логика пользователя
     const user = await UserTheme.findOne({ telegramId });
     if (!user) {
       console.log(`Создаем нового пользователя: ${telegramId}`);
