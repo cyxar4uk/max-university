@@ -49,7 +49,7 @@ app.add_middleware(
 SECRET_KEY = "your-secret-key-change-in-production"
 
 # MAX Bot API Token (один и тот же для бота и mini-app)
-MAX_BOT_TOKEN = "f9LHodD0cOI5MJfQ6eqCiVzCVUt8Va__S2Nzwvj06nK6_VfYt4Ra9Sp04TSWBpi5vi_XOuNQ9MNBrHU6hsIu"
+MAX_BOT_TOKEN = os.environ.get("MAX_BOT_TOKEN")
 # Документация: https://dev.max.ru/docs-api — запросы на platform-api.max.ru, клавиатура через attachments
 MAX_API_BASE = os.environ.get("MAX_BOT_API_BASE", "https://platform-api.max.ru")
 
