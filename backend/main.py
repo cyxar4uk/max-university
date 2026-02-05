@@ -50,7 +50,8 @@ SECRET_KEY = "your-secret-key-change-in-production"
 
 # MAX Bot API Token (один и тот же для бота и mini-app)
 MAX_BOT_TOKEN = "f9LHodD0cOI5MJfQ6eqCiVzCVUt8Va__S2Nzwvj06nK6_VfYt4Ra9Sp04TSWBpi5vi_XOuNQ9MNBrHU6hsIu"
-MAX_API_BASE = "https://api.max.ru/bot"
+# Документация: https://dev.max.ru/docs-api — запросы на platform-api.max.ru, клавиатура через attachments
+MAX_API_BASE = os.environ.get("MAX_BOT_API_BASE", "https://platform-api.max.ru")
 
 # ============ МОДЕЛИ ДАННЫХ ============
 
@@ -65,10 +66,11 @@ class User(BaseModel):
     university_id: Optional[int] = 1
 
 class BotUpdate(BaseModel):
-    """Входящее обновление от MAX Bot"""
-    update_id: int
+    """Входящее обновление от MAX Bot (message, callback_query или message_callback по доке MAX)."""
+    update_id: Optional[int] = None
     message: Optional[Dict] = None
     callback_query: Optional[Dict] = None
+    message_callback: Optional[Dict] = None  # MAX: событие при нажатии callback-кнопки
 
 class InlineKeyboardButton(BaseModel):
     text: str
@@ -94,8 +96,9 @@ class MAXBotAPI:
     def __init__(self, token: str):
         self.token = token
         self.base_url = MAX_API_BASE
+        # MAX: «используйте заголовок Authorization: <token>»
         self.headers = {
-            "Authorization": f"Bearer {token}",
+            "Authorization": token.strip(),
             "Content-Type": "application/json"
         }
     
@@ -105,20 +108,31 @@ class MAXBotAPI:
         text: str, 
         reply_markup: Optional[Dict] = None
     ):
-        """Отправка сообщения пользователю"""
+        """Отправка сообщения пользователю (MAX: клавиатура через attachments, см. dev.max.ru/docs-api)."""
         async with httpx.AsyncClient() as client:
+            attachments = _reply_markup_to_max_attachments(reply_markup) if reply_markup else []
             payload = {
-                "user_id": user_id,
+                "chat_id": user_id,
                 "text": text,
+                "format": "markdown",
             }
-            if reply_markup:
-                payload["reply_markup"] = reply_markup
-            
+            if attachments:
+                payload["attachments"] = attachments
             response = await client.post(
-                f"{self.base_url}/sendMessage",
+                f"{self.base_url}/messages",
                 headers=self.headers,
                 json=payload
             )
+            if response.status_code >= 400:
+                payload_fb = {"user_id": user_id, "text": text}
+                if reply_markup:
+                    payload_fb["reply_markup"] = reply_markup
+                r2 = await client.post(
+                    "https://api.max.ru/bot/sendMessage",
+                    headers=self.headers,
+                    json=payload_fb
+                )
+                return r2.json()
             return response.json()
     
     async def answer_callback_query(
@@ -150,24 +164,57 @@ class MAXBotAPI:
         text: str,
         reply_markup: Optional[Dict] = None
     ):
-        """Редактирование сообщения"""
+        """Редактирование сообщения (MAX: PUT /messages/{messageId}, клавиатура — attachments)."""
         async with httpx.AsyncClient() as client:
-            payload = {
-                "user_id": user_id,
-                "message_id": message_id,
-                "text": text,
-            }
-            if reply_markup:
-                payload["reply_markup"] = reply_markup
-            
-            response = await client.post(
-                f"{self.base_url}/editMessageText",
+            payload = {"text": text, "format": "markdown"}
+            attachments = _reply_markup_to_max_attachments(reply_markup) if reply_markup else []
+            if attachments:
+                payload["attachments"] = attachments
+            response = await client.put(
+                f"{self.base_url}/messages/{message_id}",
                 headers=self.headers,
                 json=payload
             )
+            if response.status_code >= 400:
+                payload_fb = {"user_id": user_id, "message_id": message_id, "text": text}
+                if reply_markup:
+                    payload_fb["reply_markup"] = reply_markup
+                r2 = await client.post(
+                    "https://api.max.ru/bot/editMessageText",
+                    headers=self.headers,
+                    json=payload_fb
+                )
+                return r2.json()
             return response.json()
 
 bot_api = MAXBotAPI(MAX_BOT_TOKEN)
+
+
+def _reply_markup_to_max_attachments(reply_markup: Dict) -> List[Dict]:
+    """
+    Конвертирует нашу клавиатуру (inline_keyboard с callback_data/url/web_app)
+    в формат MAX API: attachments с type=inline_keyboard и payload.buttons.
+    Документация: https://dev.max.ru/docs-api — виды кнопок: callback, link, open_app.
+    """
+    if not reply_markup or "inline_keyboard" not in reply_markup:
+        return []
+    rows = reply_markup["inline_keyboard"]
+    buttons = []
+    for row in rows:
+        max_row = []
+        for btn in row:
+            text = btn.get("text", "")
+            if btn.get("callback_data"):
+                max_row.append({"type": "callback", "text": text, "payload": btn["callback_data"]})
+            elif btn.get("url"):
+                max_row.append({"type": "link", "text": text, "url": btn["url"]})
+            elif btn.get("web_app") and isinstance(btn["web_app"], dict) and btn["web_app"].get("url"):
+                max_row.append({"type": "open_app", "text": text, "url": btn["web_app"]["url"]})
+            else:
+                max_row.append({"type": "callback", "text": text, "payload": btn.get("callback_data", "")})
+        buttons.append(max_row)
+    return [{"type": "inline_keyboard", "payload": {"buttons": buttons}}] if buttons else []
+
 
 # ============ INLINE КЛАВИАТУРЫ ============
 
@@ -579,17 +626,21 @@ async def bot_webhook(update: BotUpdate, background_tasks: BackgroundTasks):
                     reply_markup=get_quick_actions_keyboard("profile")
                 )
         
-        # Обработка callback query (нажатия на inline кнопки)
-        elif update.callback_query:
-            callback = update.callback_query
-            callback_query_id = callback.get("id")
-            user_id = callback.get("from", {}).get("id")
-            callback_data = callback.get("data")
-            message_id = callback.get("message", {}).get("message_id")
+        # Обработка callback (MAX: callback_query или message_callback)
+        callback = update.callback_query or update.message_callback
+        if callback:
+            callback_query_id = callback.get("id") or callback.get("query_id") or ""
+            from_info = callback.get("from", {}) or callback.get("user", {})
+            user_id = from_info.get("id") or from_info.get("user_id")
+            callback_data = str(callback.get("data") or callback.get("payload") or "")
+            msg = callback.get("message", {})
+            message_id = msg.get("message_id") or msg.get("mid") or msg.get("id")
+            if not user_id or not callback_data:
+                return {"status": "ok"}
             
             # Обработка выбора роли
             if callback_data.startswith("role_"):
-                role = callback_data.split("_")[1]
+                role = callback_data.split("_", 1)[1]
                 await handle_role_selection(user_id, callback_query_id, role, message_id)
             
             # Обработка выбора блока
