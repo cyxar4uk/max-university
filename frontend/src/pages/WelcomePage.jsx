@@ -14,6 +14,7 @@ const WelcomePage = ({ returnTo }) => {
   const [invitationCode, setInvitationCode] = useState('');
   const [codeError, setCodeError] = useState('');
   const [processingCode, setProcessingCode] = useState(false);
+  const [selectingRole, setSelectingRole] = useState(false);
 
   const goAfterSuccess = returnTo || '/home';
 
@@ -53,6 +54,7 @@ const WelcomePage = ({ returnTo }) => {
   }, [searchParams, dispatch, navigate, returnTo]);
 
   const initializeWithRole = async (role, universityId = 1) => {
+    setSelectingRole(true);
     let userInfo;
 
     // Получаем данные пользователя из MAX Bridge или используем мок
@@ -90,6 +92,14 @@ const WelcomePage = ({ returnTo }) => {
     localStorage.setItem('maxUserId', String(userInfo.id));
 
     navigate(goAfterSuccess, { replace: true });
+  };
+
+  const handleRoleSelect = async (role) => {
+    try {
+      await initializeWithRole(role);
+    } finally {
+      setSelectingRole(false);
+    }
   };
 
   const handleInvitationCode = async (code) => {
@@ -168,6 +178,28 @@ const WelcomePage = ({ returnTo }) => {
         <div className="welcome-container">
           <h1 className="welcome-title">🎓 Цифровой университет</h1>
           <p className="welcome-subtitle">Введите код приглашения для входа в цифровое пространство вашего университета</p>
+
+          <div className="welcome-role-section">
+            <p className="welcome-role-title">Выберите роль для входа:</p>
+            <div className="welcome-role-grid">
+              {[
+                { key: 'parent', label: 'Родитель' },
+                { key: 'student', label: 'Студент' },
+                { key: 'employee', label: 'Сотрудник' },
+                { key: 'teacher', label: 'Преподаватель' },
+              ].map((role) => (
+                <button
+                  key={role.key}
+                  type="button"
+                  className="welcome-role-button"
+                  onClick={() => handleRoleSelect(role.key)}
+                  disabled={selectingRole || processingCode}
+                >
+                  {role.label}
+                </button>
+              ))}
+            </div>
+          </div>
           
           <form onSubmit={handleSubmitCode} className="invitation-form">
             <div className="form-group">
