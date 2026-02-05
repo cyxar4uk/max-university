@@ -33,6 +33,8 @@ dist/
 .env
 .env.local
 backend/.env.events
+backend/.env.bot
+backend/.env.database
 DEPLOYMENT_CHECKLIST.md
 FINAL_SETUP.md
 fix-github-pages.md

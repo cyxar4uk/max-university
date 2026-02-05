@@ -4,7 +4,7 @@ import os
 # Загрузить .env до импорта database, чтобы DATABASE_URL был доступен
 from dotenv import load_dotenv
 _backend_dir = Path(__file__).resolve().parent
-for name in (".env.events", ".env.database"):
+for name in (".env.events", ".env.database", ".env", ".env.bot"):
     p = _backend_dir / name
     if p.is_file():
         load_dotenv(p)
@@ -48,8 +48,27 @@ app.add_middleware(
 # SECRET KEY для валидации MAX Bridge
 SECRET_KEY = "your-secret-key-change-in-production"
 
-# MAX Bot API Token (один и тот же для бота и mini-app)
-MAX_BOT_TOKEN = os.environ.get("MAX_BOT_TOKEN")
+# MAX Bot API Token (из env или backend/.env.bot / .env — как DATABASE_URL)
+def _get_max_bot_token() -> str:
+    token = (os.environ.get("MAX_BOT_TOKEN") or "").strip()
+    if token:
+        return token
+    try:
+        for name in (".env.bot", ".env"):
+            p = _backend_dir / name
+            if p.is_file():
+                for line in p.read_text().splitlines():
+                    line = line.strip()
+                    if line.startswith("MAX_BOT_TOKEN="):
+                        val = line.split("=", 1)[1].strip().strip("'\"").strip()
+                        if val:
+                            return val
+                        break
+    except Exception:
+        pass
+    return ""
+
+MAX_BOT_TOKEN = _get_max_bot_token() or os.environ.get("MAX_BOT_TOKEN", "")
 # Документация: https://dev.max.ru/docs-api — запросы на platform-api.max.ru, клавиатура через attachments
 MAX_API_BASE = os.environ.get("MAX_BOT_API_BASE", "https://platform-api.max.ru")
 
