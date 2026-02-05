@@ -7,6 +7,8 @@ import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import { promises as fs } from 'fs';
+import path from 'path';
 import { DEFAULT_CHANNELS } from './channels.config.js';
 
 dotenv.config();
@@ -18,6 +20,35 @@ app.use(express.json());
 const MONGO_URI = process.env.MONGOdb || process.env.MONGODB_URI;
 if (!MONGO_URI) {
   console.warn('MONGOdb not set; feed API will return empty data.');
+}
+
+const FEED_OVERRIDE_PATH = process.env.FEED_OVERRIDE_PATH
+  ? path.resolve(process.cwd(), process.env.FEED_OVERRIDE_PATH)
+  : null;
+let manualFeedCache = null;
+let manualFeedMtime = null;
+
+async function loadManualFeed() {
+  if (!FEED_OVERRIDE_PATH) return null;
+  try {
+    const stat = await fs.stat(FEED_OVERRIDE_PATH);
+    const mtime = stat.mtimeMs;
+    if (manualFeedCache && manualFeedMtime === mtime) {
+      return manualFeedCache;
+    }
+    const raw = await fs.readFile(FEED_OVERRIDE_PATH, 'utf-8');
+    const parsed = JSON.parse(raw);
+    const posts = Array.isArray(parsed?.posts) ? parsed.posts : [];
+    const sources = Array.isArray(parsed?.sources) ? parsed.sources : [];
+    manualFeedCache = { posts, sources };
+    manualFeedMtime = mtime;
+    return manualFeedCache;
+  } catch (err) {
+    console.warn('Feed override file not available or invalid:', err.message);
+    manualFeedCache = null;
+    manualFeedMtime = null;
+    return null;
+  }
 }
 
 const NewsPostSchema = new mongoose.Schema({
@@ -45,6 +76,10 @@ async function connectDb() {
 
 app.get('/api/feed', async (req, res) => {
   try {
+    const manualFeed = await loadManualFeed();
+    if (manualFeed) {
+      return res.json({ posts: manualFeed.posts, total: manualFeed.posts.length });
+    }
     const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
     const offset = parseInt(req.query.offset, 10) || 0;
     const channel = req.query.channel ? String(req.query.channel).trim() : null;
@@ -92,6 +127,11 @@ app.get('/api/feed', async (req, res) => {
 
 app.get('/api/sources', async (_req, res) => {
   try {
+    const manualFeed = await loadManualFeed();
+    if (manualFeed) {
+      const list = manualFeed.sources.length ? manualFeed.sources : DEFAULT_CHANNELS;
+      return res.json({ sources: list });
+    }
     if (!mongoose.connection.readyState) {
       return res.json({ sources: DEFAULT_CHANNELS });
     }

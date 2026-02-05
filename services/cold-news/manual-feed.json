@@ -1,0 +1,19 @@
+{
+  "sources": [
+    "example_channel_1",
+    "example_channel_2"
+  ],
+  "posts": [
+    {
+      "id": "manual-1",
+      "text": "Здесь можно временно вручную подставить текст поста для ленты.",
+      "date": "2024-01-15T10:00:00.000Z",
+      "channel": "Пример канала",
+      "channelUsername": "example_channel_1",
+      "channelId": "manual",
+      "link": "https://t.me/example_channel_1/1",
+      "tema": ["пример", "объявление"],
+      "tags": ["manual"]
+    }
+  ]
+}
