@@ -17,6 +17,16 @@ except ImportError:
     psycopg2 = None
     pg_extras = None
 
+# Подгрузить .env.database из каталога backend (на случай если main.py загрузился после нас)
+try:
+    from pathlib import Path
+    from dotenv import load_dotenv
+    _db_dir = Path(__file__).resolve().parent
+    load_dotenv(_db_dir / ".env.database")
+    load_dotenv(_db_dir / ".env.events")
+except Exception:
+    pass
+
 # PostgreSQL: при наличии DATABASE_URL пользователи хранятся в PG
 DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 USE_PG = bool(DATABASE_URL and psycopg2)
