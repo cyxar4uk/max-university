@@ -1,8 +1,16 @@
+from pathlib import Path
+import os
+
+# Загрузить .env до импорта database, чтобы DATABASE_URL был доступен
+_backend_dir = Path(__file__).resolve().parent
+from dotenv import load_dotenv
+load_dotenv(_backend_dir / ".env.events")
+load_dotenv(_backend_dir / ".env.database")
+
 from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
-import os
 import uvicorn
 import json
 import hmac
@@ -16,6 +24,11 @@ app = FastAPI(title="Digital University MAX Bot + Mini-App", version="2.0.0")
 @app.on_event("startup")
 async def startup_event():
     """Инициализация баз данных при старте приложения"""
+    import logging
+    if getattr(database, "USE_PG", False):
+        logging.getLogger("uvicorn.error").info("Database: PostgreSQL (users)")
+    else:
+        logging.getLogger("uvicorn.error").info("Database: SQLite only (DATABASE_URL not set or psycopg2 missing)")
     database.init_databases()
 
 # CORS
