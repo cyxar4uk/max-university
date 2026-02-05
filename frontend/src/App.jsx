@@ -118,7 +118,7 @@ function App() {
   return (
     <Provider store={store}>
       <Router>
-        {false && showMockNotification && (
+        {showMockNotification && (
           <MockModeNotification 
             error={mockModeError}
             onDismiss={() => setShowMockNotification(false)}
