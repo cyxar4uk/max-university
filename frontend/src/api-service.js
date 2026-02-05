@@ -88,8 +88,9 @@ class UniversityAPIService {
     return this.mockMode;
   }
 
-  // Аутентификация пользователя
-  async authenticateUser() {
+  // Аутентификация пользователя (имя, фамилия из MAX Bridge; роль из start_param или localStorage).
+  // Документация MAX: https://dev.max.ru/docs-api
+  async authenticateUser(roleFromStartParam = null) {
     try {
       const userData = window.WebApp?.initDataUnsafe;
       if (!userData || !userData.user) {
@@ -113,15 +114,18 @@ class UniversityAPIService {
         };
       }
 
-      const response = await this.client.post('/users/auth', {
+      const role = roleFromStartParam ?? localStorage.getItem('userRole');
+      const payload = {
         max_user_id: userData.user.id,
-        first_name: userData.user.first_name,
-        last_name: userData.user.last_name,
-        username: userData.user.username,
-        photo_url: userData.user.photo_url,
-        language_code: userData.user.language_code,
-        init_data: window.WebApp.initData,
-      });
+        first_name: userData.user.first_name ?? '',
+        last_name: userData.user.last_name ?? '',
+        username: userData.user.username ?? null,
+        photo_url: userData.user.photo_url ?? null,
+        language_code: userData.user.language_code ?? null,
+      };
+      if (role) payload.role = role;
+
+      const response = await this.client.post('/users/auth', payload);
 
       return response.data;
     } catch (error) {

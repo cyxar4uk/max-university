@@ -1213,6 +1213,114 @@
   color: white;
 }
 
+/* Единый хедер приложения (Главная, Хаб) */
+.app-header {
+  flex-shrink: 0;
+}
+.app-header--white {
+  background: var(--max-bg) !important;
+  color: var(--max-text);
+  box-shadow: 0 1px 0 var(--max-border);
+}
+.app-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+}
+.app-header__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--max-text);
+  text-align: left;
+  font: inherit;
+}
+.app-header__avatar {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--max-bg-secondary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.app-header__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.app-header__avatar-initial {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.1rem;
+  background: var(--max-primary);
+  color: white;
+}
+.app-header__greeting-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+.app-header__greeting-line {
+  font-size: var(--max-font-size-xs);
+  color: var(--max-text-secondary);
+  line-height: 1.2;
+}
+.app-header__greeting-name {
+  font-size: var(--max-font-size-base);
+  font-weight: 600;
+  color: var(--max-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.app-header__center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.app-header__right {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.app-header__right button,
+.app-header__search {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.app-header__right img {
+  opacity: 0.9;
+}
+
 .main-page-header-inner {
   display: flex;
   align-items: center;

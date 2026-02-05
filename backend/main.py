@@ -168,17 +168,12 @@ def get_welcome_open_app_keyboard() -> Dict:
     }
 
 def get_role_selection_keyboard() -> Dict:
-    """Клавиатура выбора роли"""
+    """Клавиатура выбора роли при первом запуске бота (документация MAX: https://dev.max.ru/docs-api, режим клавиатуры)."""
     return {
         "inline_keyboard": [
-            [
-                {"text": "👨‍🎓 Студент", "callback_data": "role_student"},
-                {"text": "🎯 Абитуриент", "callback_data": "role_applicant"}
-            ],
-            [
-                {"text": "👔 Сотрудник", "callback_data": "role_employee"},
-                {"text": "⚙️ Администратор", "callback_data": "role_admin"}
-            ]
+            [{"text": "👨‍👩‍👧 Родитель", "callback_data": "role_parent"}, {"text": "🎯 Абитуриент", "callback_data": "role_applicant"}],
+            [{"text": "👨‍🎓 Студент", "callback_data": "role_student"}],
+            [{"text": "👔 Преподаватель", "callback_data": "role_teacher"}, {"text": "🏢 Сотрудник", "callback_data": "role_employee"}],
         ]
     }
 
@@ -216,7 +211,37 @@ def get_main_menu_keyboard(role: str) -> Dict:
                     {"text": "💳 Оплата", "callback_data": "block_payment"}
                 ],
                 [
-                    {"text": "🌐 Открыть приложение", "web_app": {"url": "https://cyxar4uk.github.io/max-university/?role=applicant"}}
+                    {"text": "🌐 Открыть приложение", "web_app": {"url": (MINI_APP_URL or "https://max.ru").rstrip("/") + "?role=applicant"}}
+                ]
+            ]
+        },
+        "parent": {
+            "inline_keyboard": [
+                [
+                    {"text": "👤 Профиль", "callback_data": "block_profile"},
+                    {"text": "📰 Новости", "callback_data": "block_news"}
+                ],
+                [
+                    {"text": "📄 Поступление", "callback_data": "block_admission"},
+                    {"text": "💳 Оплата", "callback_data": "block_payment"}
+                ],
+                [
+                    {"text": "🌐 Открыть приложение", "web_app": {"url": (MINI_APP_URL or "https://max.ru").rstrip("/") + "?role=parent"}}
+                ]
+            ]
+        },
+        "teacher": {
+            "inline_keyboard": [
+                [
+                    {"text": "👤 Профиль", "callback_data": "block_profile"},
+                    {"text": "📅 Расписание", "callback_data": "block_schedule"}
+                ],
+                [
+                    {"text": "📝 Услуги", "callback_data": "block_services"},
+                    {"text": "📰 Новости", "callback_data": "block_news"}
+                ],
+                [
+                    {"text": "🌐 Открыть приложение", "web_app": {"url": (MINI_APP_URL or "https://max.ru").rstrip("/") + "?role=teacher"}}
                 ]
             ]
         },
@@ -354,35 +379,45 @@ def get_quick_actions_keyboard(action: str) -> Dict:
 # ============ ОБРАБОТЧИКИ КОМАНД ============
 
 async def handle_start_command(user_id: int, user_data: Dict):
-    """Обработка команды /start: приветствие + инлайн-кнопка «Открыть приложение» (MAX: open_app / web_app)."""
-    # Приветственное сообщение с кнопкой «Открыть приложение» (документация MAX: dev.max.ru/docs-api)
+    """Обработка команды /start: создаём/обновляем пользователя в БД, при первом запуске — только выбор роли (клавиатура); иначе приветствие + «Открыть приложение»."""
+    first_name = user_data.get("first_name") or ""
+    last_name = user_data.get("last_name") or ""
+    username = user_data.get("username")
+    existing = database.get_user(user_id)
+    if not existing:
+        database.create_user({
+            "max_user_id": user_id,
+            "first_name": first_name,
+            "last_name": last_name,
+            "username": username,
+            "photo_url": None,
+            "language_code": user_data.get("language_code"),
+            "role": None,
+            "university_id": 1,
+        })
+    else:
+        database.update_user_profile(user_id, first_name=first_name, last_name=last_name, username=username)
+    existing = database.get_user(user_id)
+    role = (existing or {}).get("role")
+    users_db[user_id] = users_db.get(user_id) or {}
+    if role:
+        users_db[user_id]["role"] = role
+    if not role:
+        text = (
+            f"👋 Привет, {first_name or 'друг'}!\n\n"
+            "Добро пожаловать в **Цифровой университет** на платформе MAX.\n\n"
+            "Выберите свою роль — затем откроется приложение:"
+        )
+        await bot_api.send_message(user_id=user_id, text=text, reply_markup=get_role_selection_keyboard())
+        return
     text = (
-        f"👋 Привет, {user_data.get('first_name', 'пользователь')}!\n\n"
-        "Добро пожаловать в **Цифровой университет** на платформе MAX.\n\n"
+        f"👋 Привет, {first_name or 'друг'}!\n\n"
+        "Добро пожаловать в **Цифровой университет**.\n\n"
         "Нажмите кнопку ниже, чтобы открыть приложение:"
     )
-    await bot_api.send_message(
-        user_id=user_id,
-        text=text,
-        reply_markup=get_welcome_open_app_keyboard()
-    )
-    # Дополнительно: если уже есть роль — показываем главное меню
-    if user_id in users_db and users_db[user_id].get("role"):
-        role = users_db[user_id]["role"]
-        menu_text = f"Или выберите раздел:\n\nВаша роль: {get_role_name(role)}"
-        await bot_api.send_message(
-            user_id=user_id,
-            text=menu_text,
-            reply_markup=get_main_menu_keyboard(role)
-        )
-    else:
-        # Первый запуск — выбор роли
-        role_text = "Для начала выберите свою роль:"
-        await bot_api.send_message(
-            user_id=user_id,
-            text=role_text,
-            reply_markup=get_role_selection_keyboard()
-        )
+    await bot_api.send_message(user_id=user_id, text=text, reply_markup=get_welcome_open_app_keyboard())
+    menu_text = f"Или выберите раздел:\n\nВаша роль: {get_role_name(role)}"
+    await bot_api.send_message(user_id=user_id, text=menu_text, reply_markup=get_main_menu_keyboard(role))
 
 async def handle_help_command(user_id: int):
     """Обработка команды /help"""
@@ -409,30 +444,30 @@ async def handle_help_command(user_id: int):
 # ============ ОБРАБОТЧИКИ CALLBACK ============
 
 async def handle_role_selection(user_id: int, callback_query_id: str, role: str, message_id: int):
-    """Обработка выбора роли"""
-    
-    # Сохраняем роль
+    """Обработка выбора роли: сохраняем в БД и в users_db, затем показываем кнопку «Открыть приложение» с start_param (роль передаётся в мини-апп)."""
     if user_id not in users_db:
         users_db[user_id] = {}
-    
     users_db[user_id]["role"] = role
     users_db[user_id]["selected_at"] = datetime.now().isoformat()
-    
-    # Отвечаем на callback
+    database.update_user_role(user_id, role, 1)
     await bot_api.answer_callback_query(
         callback_query_id=callback_query_id,
         text=f"Роль выбрана: {get_role_name(role)}"
     )
-    
-    # Редактируем сообщение с главным меню
-    text = f"✅ Отлично! Вы выбрали роль: **{get_role_name(role)}**\n\n" \
-           f"Теперь выберите нужный раздел:"
-    
+    url = (MINI_APP_URL or "").strip() or "https://max.ru"
+    if "?" in url:
+        open_url = f"{url}&role={role}"
+    else:
+        open_url = f"{url}?role={role}"
+    text = (
+        f"✅ Вы выбрали роль: **{get_role_name(role)}**\n\n"
+        "Нажмите кнопку ниже, чтобы открыть приложение — в нём будут сохранены ваше имя, фамилия и роль."
+    )
     await bot_api.edit_message_text(
         user_id=user_id,
         message_id=message_id,
         text=text,
-        reply_markup=get_main_menu_keyboard(role)
+        reply_markup={"inline_keyboard": [[{"text": "Открыть приложение", "web_app": {"url": open_url}}]]}
     )
 
 async def handle_block_selection(user_id: int, callback_query_id: str, block: str, message_id: int):
@@ -568,10 +603,12 @@ async def bot_webhook(update: BotUpdate, background_tasks: BackgroundTasks):
 def get_role_name(role: str) -> str:
     """Получить красивое название роли"""
     roles = {
-        "student": "Студент",
+        "parent": "Родитель",
         "applicant": "Абитуриент",
+        "student": "Студент",
+        "teacher": "Преподаватель",
         "employee": "Сотрудник",
-        "admin": "Администратор"
+        "admin": "Администратор",
     }
     return roles.get(role, role)
 
@@ -631,19 +668,9 @@ async def authenticate_user(user: User, x_max_init_data: Optional[str] = Header(
         except Exception as e:
             raise HTTPException(status_code=401, detail=f"Invalid init data: {str(e)}")
     
-    # Проверяем наличие пользователя в БД
-    existing_user = database.get_user(user.max_user_id)
-    if existing_user:
-        return {
-            "user": existing_user,
-            "new_user": False,
-            "message": "User already exists"
-        }
-    
-    # Создаём нового пользователя в БД
     user_data = {
         "max_user_id": user.max_user_id,
-        "first_name": user.first_name,
+        "first_name": user.first_name or "",
         "last_name": user.last_name,
         "username": user.username,
         "photo_url": user.photo_url,
@@ -651,13 +678,22 @@ async def authenticate_user(user: User, x_max_init_data: Optional[str] = Header(
         "role": user.role,
         "university_id": user.university_id or 1
     }
+    existing_user = database.get_user(user.max_user_id)
+    if existing_user:
+        database.update_user_profile(
+            user.max_user_id,
+            first_name=user_data["first_name"],
+            last_name=user_data["last_name"],
+            username=user_data["username"],
+            photo_url=user_data["photo_url"],
+            language_code=user_data["language_code"],
+        )
+        if user.role:
+            database.update_user_role(user.max_user_id, user.role, user_data["university_id"])
+        updated = database.get_user(user.max_user_id)
+        return {"user": updated, "new_user": False, "message": "User updated"}
     new_user = database.create_user(user_data)
-    
-    return {
-        "user": new_user,
-        "new_user": True,
-        "message": "User created successfully"
-    }
+    return {"user": new_user, "new_user": True, "message": "User created successfully"}
 
 @app.put("/api/users/role")
 async def update_user_role(

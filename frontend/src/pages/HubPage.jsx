@@ -7,6 +7,7 @@ import { getDisplayUser } from '../utils/displayUser.js';
 import HubEventsWidget from '../Widgets/HubEventsWidget.jsx';
 import FeedSourcesModal, { getStoredSources, setStoredSources } from '../components/FeedSourcesModal.jsx';
 import StoriesViewer from '../components/StoriesViewer.jsx';
+import AppHeader from '../components/AppHeader.jsx';
 import { MOCK_STORIES } from '../mockStories.js';
 
 const baseUrl = typeof import.meta.env?.BASE_URL === 'string' ? import.meta.env.BASE_URL : '/';
@@ -19,7 +20,7 @@ const HubPage = () => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.user);
   const { userInfo } = useMAXBridge();
-  const { avatarUrl: userAvatar } = getDisplayUser(userInfo, user);
+  const { displayName, avatarUrl: userAvatar } = getDisplayUser(userInfo, user);
   const [feedPosts, setFeedPosts] = useState([]);
   const [feedTotal, setFeedTotal] = useState(0);
   const [sources, setSources] = useState([]);
@@ -97,21 +98,12 @@ const HubPage = () => {
 
   return (
     <div className="hub-page">
-      {/* Хедер по макету: аватар | сторис в центре | поиск */}
-      <header className="hub-header hub-header--white">
-        <div className="hub-header-inner">
-          <button
-            type="button"
-            className="hub-header-avatar-wrap"
-            onClick={handleProfileClick}
-            aria-label="Профиль"
-          >
-            {userAvatar ? (
-              <img src={userAvatar} alt="" className="hub-header-avatar-img" />
-            ) : (
-              <span className="hub-header-avatar-initial">?</span>
-            )}
-          </button>
+      <AppHeader
+        variant="hub"
+        displayName={displayName}
+        avatarUrl={userAvatar}
+        onProfileClick={handleProfileClick}
+        centerContent={
           <div className="hub-header-stories">
             <div className="hub-header-story hub-header-story--add" aria-hidden="true">+</div>
             {MOCK_STORIES.slice(0, 3).map((story, index) => (
@@ -130,11 +122,13 @@ const HubPage = () => {
               </button>
             ))}
           </div>
+        }
+        rightContent={
           <button type="button" className="hub-header-search" aria-label="Поиск">
             <img src={icon('iconsearch')} alt="" width={22} height={22} />
           </button>
-        </div>
-      </header>
+        }
+      />
 
       <main className="hub-content">
         {/* Ближайшие события — первым блоком, карточка или пустое состояние */}

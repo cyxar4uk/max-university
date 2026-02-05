@@ -7,6 +7,7 @@ import { getDisplayUser } from '../utils/displayUser.js';
 import ScheduleWidget from '../Widgets/ScheduleWidget.jsx';
 import DigitalPassWidget from '../Widgets/DigitalPassWidget.jsx';
 import StoriesViewer from '../components/StoriesViewer.jsx';
+import AppHeader from '../components/AppHeader.jsx';
 import { MOCK_STORIES } from '../mockStories.js';
 
 const EVENTS_BOT_LINK = 'https://t.me/event_ranepa_bot';
@@ -110,26 +111,14 @@ const MainPage = () => {
 
   return (
     <div className="main-page">
-      <header className="main-header main-page-header main-page-header--white">
-        <div className="main-page-header-inner">
-          <button
-            type="button"
-            className="main-page-header-left"
-            onClick={handleProfileClick}
-            aria-label="Профиль"
-          >
-            <span className="main-page-avatar main-page-avatar--shadow">
-              {userAvatar ? (
-                <img src={userAvatar} alt="" />
-              ) : (
-                <span className="main-page-avatar-initial" aria-hidden>{displayName.charAt(0).toUpperCase()}</span>
-              )}
-            </span>
-            <div className="main-page-greeting-block">
-              <span className="main-page-greeting-line">{getGreeting()},</span>
-              <span className="main-page-greeting-name">{firstName}</span>
-            </div>
-          </button>
+      <AppHeader
+        variant="main"
+        displayName={displayName}
+        avatarUrl={userAvatar}
+        onProfileClick={handleProfileClick}
+        greeting={getGreeting()}
+        firstName={firstName}
+        rightContent={
           <button
             type="button"
             className="main-page-search-btn main-page-search-btn--dark"
@@ -138,8 +127,8 @@ const MainPage = () => {
           >
             <img src={icon('iconsearch')} alt="" width={22} height={22} />
           </button>
-        </div>
-      </header>
+        }
+      />
 
       <main className="main-page-content">
         {/* Инструменты: заголовок + Настроить, карточка «Следующая пара» + QR и Мероприятия */}

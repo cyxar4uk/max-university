@@ -44,42 +44,60 @@ function App() {
   useEffect(() => {
     // Suppress React Router future flags warnings
     window.__reactRouterVersion = 6;
-    // Инициализация MAX Bridge и синхронизация пользователя в Redux (аватар, имя: dev.max.ru/docs/webapps/bridge)
-    if (window.WebApp) {
-      window.WebApp.ready();
-      const maxUser = window.WebApp.initDataUnsafe?.user;
-      if (maxUser) {
-        // Реальный пользователь MAX: first_name, last_name, photo_url приходят в initDataUnsafe.user
-        const role = localStorage.getItem('userRole') || null;
-        const universityId = parseInt(localStorage.getItem('universityId') || '1', 10);
-        const canChangeRole = localStorage.getItem('invitationCodeUsed') === 'true' ? false : true;
-        store.dispatch(setUserFromMAX({
-          user: maxUser,
-          role,
-          universityId,
-          canChangeRole,
-        }));
-        console.log('MAX Bridge initialized, user:', maxUser.first_name, maxUser.last_name, !!maxUser.photo_url);
+    // Инициализация MAX Bridge и синхронизация пользователя в Redux (имя, фамилия из MAX и БД; документация: https://dev.max.ru/docs-api)
+    const initUser = async () => {
+      if (window.WebApp) {
+        window.WebApp.ready();
+        const startParam = window.WebApp.initDataUnsafe?.start_param;
+        if (startParam) {
+          const roleMatch = startParam.match(/role=(\w+)/);
+          const roleFromParam = roleMatch ? roleMatch[1] : startParam;
+          if (roleFromParam) localStorage.setItem('userRole', roleFromParam);
+        }
+        const maxUser = window.WebApp.initDataUnsafe?.user;
+        if (maxUser) {
+          try {
+            const roleFromParam = startParam?.match(/role=(\w+)/)?.[1] || startParam || undefined;
+            const auth = await apiService.authenticateUser(roleFromParam);
+            const u = auth?.user;
+            if (u) {
+              const role = u.role ?? localStorage.getItem('userRole') ?? null;
+              const universityId = parseInt(u.university_id ?? localStorage.getItem('universityId') ?? '1', 10);
+              const canChangeRole = localStorage.getItem('invitationCodeUsed') === 'true' ? false : true;
+              store.dispatch(setUserFromMAX({
+                user: { id: u.max_user_id, first_name: u.first_name, last_name: u.last_name, photo_url: u.photo_url, username: u.username },
+                role,
+                universityId,
+                canChangeRole,
+              }));
+              console.log('User from MAX + backend:', u.first_name, u.last_name, role);
+            } else {
+              const role = localStorage.getItem('userRole') || null;
+              const universityId = parseInt(localStorage.getItem('universityId') || '1', 10);
+              store.dispatch(setUserFromMAX({ user: maxUser, role, universityId, canChangeRole: true }));
+            }
+          } catch (e) {
+            console.warn('Auth failed, using init data only', e);
+            const role = localStorage.getItem('userRole') || null;
+            const universityId = parseInt(localStorage.getItem('universityId') || '1', 10);
+            store.dispatch(setUserFromMAX({ user: maxUser, role, universityId, canChangeRole: true }));
+          }
+        } else {
+          const testUserJson = localStorage.getItem('testUser');
+          const mockUser = testUserJson ? (() => { try { return JSON.parse(testUserJson); } catch { return null; } })() : null;
+          const userToSet = mockUser ?? getMockUserByRole('student');
+          const role = localStorage.getItem('userRole') || userToSet?.role || null;
+          const universityId = parseInt(localStorage.getItem('universityId') || String(userToSet?.university_id || '1'), 10);
+          const canChangeRole = localStorage.getItem('invitationCodeUsed') === 'true' ? false : true;
+          store.dispatch(setUserFromMAX({ user: userToSet, role, universityId, canChangeRole }));
+          console.log('Mock user synced to Redux:', userToSet?.first_name, userToSet?.last_name);
+        }
+        console.log('Start params:', startParam);
       } else {
-        // Нет пользователя MAX (мок или веб без бота): синхронизируем мок в Redux для имени и аватара
-        const testUserJson = localStorage.getItem('testUser');
-        const mockUser = testUserJson ? (() => { try { return JSON.parse(testUserJson); } catch { return null; } })() : null;
-        const userToSet = mockUser ?? getMockUserByRole('student');
-        const role = localStorage.getItem('userRole') || userToSet?.role || null;
-        const universityId = parseInt(localStorage.getItem('universityId') || String(userToSet?.university_id || '1'), 10);
-        const canChangeRole = localStorage.getItem('invitationCodeUsed') === 'true' ? false : true;
-        store.dispatch(setUserFromMAX({
-          user: userToSet,
-          role,
-          universityId,
-          canChangeRole,
-        }));
-        console.log('Mock user synced to Redux:', userToSet?.first_name, userToSet?.last_name);
+        console.warn('MAX Bridge not available');
       }
-      console.log('Start params:', window.WebApp.initDataUnsafe?.start_param);
-    } else {
-      console.warn('MAX Bridge not available');
-    }
+    };
+    initUser();
 
     // Подписываемся на изменения мок-режима
     const unsubscribe = apiService.onMockModeChange((enabled, error) => {

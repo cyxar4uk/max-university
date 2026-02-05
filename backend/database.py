@@ -1,6 +1,6 @@
 """
-Модуль для работы с базой данных SQLite
-Создает файлы .db для хранения структуры и данных
+Модуль для работы с базой данных SQLite и опционально PostgreSQL (пользователи).
+При заданном DATABASE_URL пользователи хранятся в PostgreSQL, остальные данные — в SQLite.
 """
 import sqlite3
 import os
@@ -9,6 +9,17 @@ from datetime import datetime
 import json
 import secrets
 import string
+
+try:
+    import psycopg2
+    from psycopg2 import extras as pg_extras
+except ImportError:
+    psycopg2 = None
+    pg_extras = None
+
+# PostgreSQL: при наличии DATABASE_URL пользователи хранятся в PG
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+USE_PG = bool(DATABASE_URL and psycopg2)
 
 # Путь к директории с базами данных
 DB_DIR = "data"
@@ -30,7 +41,7 @@ def init_databases():
 
 
 def init_users_db():
-    """Инициализация базы данных пользователей"""
+    """Инициализация базы данных пользователей (SQLite и при наличии DATABASE_URL — PostgreSQL)."""
     conn = sqlite3.connect(USERS_DB_PATH)
     cursor = conn.cursor()
     
@@ -63,6 +74,37 @@ def init_users_db():
     
     conn.commit()
     conn.close()
+
+    if USE_PG:
+        pg_conn = psycopg2.connect(DATABASE_URL)
+        pg_conn.autocommit = True
+        cur = pg_conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                max_user_id BIGINT UNIQUE NOT NULL,
+                first_name TEXT NOT NULL,
+                last_name TEXT,
+                username TEXT,
+                photo_url TEXT,
+                language_code TEXT,
+                role TEXT,
+                university_id INTEGER DEFAULT 1,
+                invitation_code_id INTEGER,
+                can_change_role BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS superadmins (
+                id SERIAL PRIMARY KEY,
+                max_user_id BIGINT UNIQUE NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.close()
+        pg_conn.close()
 
 
 def init_universities_db():
@@ -443,22 +485,47 @@ def init_default_config(cursor):
 
 def get_user(max_user_id: int) -> Optional[Dict]:
     """Получить пользователя по MAX user ID"""
+    if USE_PG:
+        conn = psycopg2.connect(DATABASE_URL, cursor_factory=pg_extras.RealDictCursor)
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM users WHERE max_user_id = %s", (max_user_id,))
+        row = cur.fetchone()
+        conn.close()
+        return dict(row) if row else None
     conn = sqlite3.connect(USERS_DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    
     cursor.execute("SELECT * FROM users WHERE max_user_id = ?", (max_user_id,))
     row = cursor.fetchone()
     conn.close()
-    
     return dict(row) if row else None
 
 
 def create_user(user_data: Dict) -> Dict:
     """Создать нового пользователя"""
+    if USE_PG:
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO users (max_user_id, first_name, last_name, username, photo_url, language_code, role, university_id, invitation_code_id, can_change_role)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            user_data["max_user_id"],
+            user_data["first_name"],
+            user_data.get("last_name"),
+            user_data.get("username"),
+            user_data.get("photo_url"),
+            user_data.get("language_code"),
+            user_data.get("role"),
+            user_data.get("university_id", 1),
+            user_data.get("invitation_code_id"),
+            user_data.get("can_change_role", True),
+        ))
+        conn.commit()
+        conn.close()
+        return get_user(user_data["max_user_id"])
     conn = sqlite3.connect(USERS_DB_PATH)
     cursor = conn.cursor()
-    
     cursor.execute("""
         INSERT INTO users (max_user_id, first_name, last_name, username, photo_url, language_code, role, university_id, invitation_code_id, can_change_role)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -474,42 +541,115 @@ def create_user(user_data: Dict) -> Dict:
         user_data.get("invitation_code_id"),
         user_data.get("can_change_role", 1)
     ))
-    
-    user_id = cursor.lastrowid
     conn.commit()
     conn.close()
-    
     return get_user(user_data["max_user_id"])
 
 
 def update_user_with_invitation_code(max_user_id: int, invitation_code_id: int, role: str, university_id: int):
     """Обновить пользователя после использования кода приглашения"""
+    if USE_PG:
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE users 
+            SET role = %s, university_id = %s, invitation_code_id = %s, can_change_role = false, updated_at = CURRENT_TIMESTAMP
+            WHERE max_user_id = %s
+        """, (role, university_id, invitation_code_id, max_user_id))
+        conn.commit()
+        conn.close()
+        return
     conn = sqlite3.connect(USERS_DB_PATH)
     cursor = conn.cursor()
-    
     cursor.execute("""
         UPDATE users 
         SET role = ?, university_id = ?, invitation_code_id = ?, can_change_role = 0, updated_at = CURRENT_TIMESTAMP
         WHERE max_user_id = ?
     """, (role, university_id, invitation_code_id, max_user_id))
-    
     conn.commit()
     conn.close()
 
 
 def update_user_role(max_user_id: int, role: str, university_id: int = 1):
     """Обновить роль пользователя"""
+    if USE_PG:
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE users 
+            SET role = %s, university_id = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE max_user_id = %s
+        """, (role, university_id, max_user_id))
+        conn.commit()
+        conn.close()
+        return
     conn = sqlite3.connect(USERS_DB_PATH)
     cursor = conn.cursor()
-    
     cursor.execute("""
         UPDATE users 
         SET role = ?, university_id = ?, updated_at = CURRENT_TIMESTAMP
         WHERE max_user_id = ?
     """, (role, university_id, max_user_id))
-    
     conn.commit()
     conn.close()
+
+
+def update_user_profile(
+    max_user_id: int,
+    first_name: Optional[str] = None,
+    last_name: Optional[str] = None,
+    username: Optional[str] = None,
+    photo_url: Optional[str] = None,
+    language_code: Optional[str] = None,
+):
+    """Обновить профиль пользователя (имя, фамилия, аватар из MAX)."""
+    if USE_PG:
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE users SET
+                first_name = COALESCE(%s, first_name),
+                last_name = COALESCE(%s, last_name),
+                username = COALESCE(%s, username),
+                photo_url = COALESCE(%s, photo_url),
+                language_code = COALESCE(%s, language_code),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE max_user_id = %s
+        """, (first_name, last_name, username, photo_url, language_code, max_user_id))
+        conn.commit()
+        conn.close()
+        return
+    conn = sqlite3.connect(USERS_DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE users SET
+            first_name = COALESCE(?, first_name),
+            last_name = COALESCE(?, last_name),
+            username = COALESCE(?, username),
+            photo_url = COALESCE(?, photo_url),
+            language_code = COALESCE(?, language_code),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE max_user_id = ?
+    """, (first_name, last_name, username, photo_url, language_code, max_user_id))
+    conn.commit()
+    conn.close()
+
+
+def is_superadmin(max_user_id: int) -> bool:
+    """Проверить, является ли пользователь суперадмином."""
+    if USE_PG:
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        cur.execute("SELECT 1 FROM superadmins WHERE max_user_id = %s LIMIT 1", (max_user_id,))
+        row = cur.fetchone()
+        conn.close()
+        return row is not None
+    conn = sqlite3.connect(USERS_DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM superadmins WHERE max_user_id = ? LIMIT 1", (max_user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row is not None
 
 
 # ============ ФУНКЦИИ ДЛЯ РАБОТЫ С КОНФИГУРАЦИЕЙ ============
