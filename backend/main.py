@@ -2,10 +2,13 @@ from pathlib import Path
 import os
 
 # Загрузить .env до импорта database, чтобы DATABASE_URL был доступен
-_backend_dir = Path(__file__).resolve().parent
 from dotenv import load_dotenv
-load_dotenv(_backend_dir / ".env.events")
-load_dotenv(_backend_dir / ".env.database")
+_backend_dir = Path(__file__).resolve().parent
+for name in (".env.events", ".env.database"):
+    p = _backend_dir / name
+    if p.is_file():
+        load_dotenv(p)
+    load_dotenv(Path.cwd() / name)  # на сервере WorkingDirectory=backend, cwd тоже подойдёт
 
 from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
