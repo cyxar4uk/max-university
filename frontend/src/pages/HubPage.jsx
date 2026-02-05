@@ -69,7 +69,11 @@ const HubPage = () => {
       setFeedOffset((append ? feedOffset : 0) + nextPosts.length);
       setFeedTotal(nextTotal);
     } catch (e) {
-      if (!append) setFeedPosts([]);
+      if (!append) {
+        setFeedPosts(MOCK_FEED_POSTS);
+        setFeedOffset(MOCK_FEED_POSTS.length);
+        setFeedTotal(MOCK_FEED_POSTS.length);
+      }
     } finally {
       setFeedLoading(false);
     }
