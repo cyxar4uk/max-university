@@ -1,13 +1,14 @@
-# MAX Digital University — бот (TypeScript)
+# Чат-бот MAX — Цифровой университет
 
-Бот написан на **TypeScript** с официальной библиотекой [max-bot-api-client-ts](https://github.com/max-messenger/max-bot-api-client-ts) (подключается из GitHub, в npm пакет не опубликован).
+Бот на **TypeScript** с библиотекой [max-bot-api-client-ts](https://github.com/max-messenger/max-bot-api-client-ts).
+
+**Назначение:** при запуске бота (или открытии чата) отправляет приветствие и клавиатуру с **4 кнопками выбора роли**: Абитуриент, Студент, Сотрудник, Администрация. Роль сохраняется в бэкенде; после выбора показывается кнопка «Открыть приложение» (мини-приложение в MAX).
 
 ## Установка
 
 ```bash
 cd services/max-bot
 npm install
-# или yarn install
 ```
 
 ## Настройка
@@ -15,40 +16,24 @@ npm install
 1. Скопируйте `.env.example` в `.env`.
 2. Заполните `BOT_TOKEN` (токен от PrimeBot в MAX).
 3. Укажите `BACKEND_URL` (адрес FastAPI, например `http://127.0.0.1:8000`).
-4. Опционально: `BOT_SECRET` для вызова `/api/bot/sync-user` (можно использовать тот же токен бота или задать отдельный секрет в бэкенде).
+4. Укажите `MINI_APP_URL` (URL мини-приложения, например `https://max-university.anyway-community.ru`).
+5. Опционально: `BOT_SECRET` для заголовка `X-Bot-Secret` при вызове `/api/bot/sync-user`.
 
 ## Запуск
 
 ```bash
-# Разработка
-yarn dev
-
-# Сборка и запуск
-yarn build
-yarn start
+npm run build
+npm start
 ```
 
-Либо с переменными в одну строку:
+## Поведение
 
-```bash
-BOT_TOKEN="<token>" BACKEND_URL="http://127.0.0.1:8000" node dist/bot.js
-```
+- **`/start`** и **`bot_started`**: приветствие + клавиатура с 4 ролями (если роль не выбрана) или кнопка «Открыть приложение» (если роль уже есть).
+- **Нажатие на кнопку роли**: сохранение роли через `POST /api/bot/sync-user`, уведомление и кнопка «Открыть приложение».
+- **Любое другое сообщение**: ответ «Я не знаю такой команды. Используйте /start».
 
-## Команды и обработчики
-
-- `bot.command('start', ...)` — приветствие, выбор роли, главное меню.
-- `bot.command('help', ...)` — список команд.
-- `bot.command('schedule', ...)` — расписание с быстрыми действиями.
-- `bot.command('profile', ...)` — профиль пользователя.
-- `bot.action(/^role_(.+)$/, ...)` — выбор роли (callback-кнопки).
-- `bot.action(/^block_(.+)$/, ...)` — выбор блока (профиль, расписание и т.д.).
-- `bot.action('back_to_menu', ...)` — возврат в главное меню.
-- `bot.on('message_created', ...)` — ответ на неизвестные сообщения.
-
-Пользователи и роли синхронизируются с бэкендом через `POST /api/bot/sync-user`.
+В настройках бота на платформе MAX **не задаётся URL вебхука** — бот получает обновления через Long Polling по токену.
 
 ## Деплой
 
-Бот должен быть доступен по HTTPS для приёма вебхуков от MAX. Настройте в MAX URL вебхука на ваш сервер (например, `https://your-domain.ru/bot` или отдельный порт за nginx).
-
-На бэкенде (FastAPI) должен быть включён эндпоинт `POST /api/bot/sync-user` и при необходимости заголовок `X-Bot-Secret`.
+На VPS бот запускается как systemd-сервис `max-university-bot` (см. `deploy/max-university-bot.service` и `docs/VPS_DEPLOY.md`).

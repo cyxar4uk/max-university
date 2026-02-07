@@ -20,6 +20,9 @@ node_modules/
 dist/
 .DS_Store
 
+# Local copy of MAX Bot API client (docs/examples only; bot uses npm package)
+max-bot-api-client-ts-main/
+
 # IDE
 .vscode/
 .idea/

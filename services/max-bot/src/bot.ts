@@ -1,14 +1,7 @@
 /// <reference path="./context.d.ts" />
 import 'dotenv/config';
 import { Bot, Keyboard, Context } from '@maxhub/max-bot-api';
-import {
-  roleSelectionKeyboard,
-  welcomeOpenAppKeyboard,
-  mainMenuKeyboard,
-  quickActionsKeyboard,
-  getBlockTitle,
-  getRoleName,
-} from './keyboards';
+import { roleSelectionKeyboard, welcomeOpenAppKeyboard, getRoleName } from './keyboards';
 import { syncUser, setUserRole } from './backend';
 
 const token = process.env.BOT_TOKEN;
@@ -17,14 +10,11 @@ if (!token) throw new Error('BOT_TOKEN must be provided');
 const bot = new Bot(token);
 
 bot.api.setMyCommands([
-  { name: 'start', description: 'Главное меню' },
-  { name: 'help', description: 'Помощь' },
-  { name: 'schedule', description: 'Расписание' },
-  { name: 'profile', description: 'Мой профиль' },
+  { name: 'start', description: 'Начать / главное меню' },
 ]);
 
-/* ----- /start ----- */
-bot.command('start', async (ctx: Context) => {
+/** Приветствие и клавиатура выбора роли (4 кнопки) или кнопка «Открыть приложение», если роль уже выбрана */
+async function sendWelcome(ctx: Context) {
   const userId = ctx.user?.user_id ?? ctx.chatId;
   if (!userId) return ctx.reply('Не удалось определить пользователя.');
 
@@ -44,72 +34,24 @@ bot.command('start', async (ctx: Context) => {
 
   if (!role) {
     return ctx.reply(
-      `👋 Привет, ${firstName || 'друг'}!\n\nДобро пожаловать в **Цифровой университет** на платформе MAX.\n\nВыберите свою роль — затем откроется приложение:`,
+      `👋 Привет${firstName ? `, ${firstName}` : ''}!\n\nДобро пожаловать в **Цифровой университет** на платформе MAX.\n\nВыберите свою роль:`,
       { attachments: [roleSelectionKeyboard()], format: 'markdown' }
     );
   }
 
-  await ctx.reply(
-    `👋 Привет, ${firstName || 'друг'}!\n\nДобро пожаловать в **Цифровой университет**.\n\nНажмите кнопку ниже, чтобы открыть приложение:`,
+  return ctx.reply(
+    `👋 Привет${firstName ? `, ${firstName}` : ''}!\n\nДобро пожаловать в **Цифровой университет**. Ваша роль: **${getRoleName(role)}**.\n\nНажмите кнопку ниже, чтобы открыть приложение:`,
     { attachments: [welcomeOpenAppKeyboard(role)], format: 'markdown' }
   );
-  return ctx.reply(`Или выберите раздел:\n\nВаша роль: ${getRoleName(role)}`, {
-    attachments: [mainMenuKeyboard(role)],
-    format: 'markdown',
-  });
-});
+}
 
-/* ----- /help ----- */
-bot.command('help', (ctx: Context) => {
-  return ctx.reply(
-    `📚 **Доступные команды:**
+/* ----- /start ----- */
+bot.command('start', (ctx: Context) => sendWelcome(ctx));
 
-/start - Главное меню
-/help - Помощь
-/profile - Мой профиль
-/schedule - Расписание на сегодня
-/assignments - Мои задания
-/events - События
-/services - Электронные услуги
+/* ----- bot_started (запуск бота / открытие чата с ботом) — то же приветствие и выбор роли ----- */
+bot.on('bot_started', (ctx: Context & { startPayload?: string }) => sendWelcome(ctx));
 
-**Быстрые команды:**
-/next - Следующее занятие
-/deadline - Ближайший дедлайн
-/card - Студенческий билет
-/news - Последние новости`,
-    { format: 'markdown' }
-  );
-});
-
-/* ----- /schedule ----- */
-bot.command('schedule', (ctx) => {
-  return ctx.reply('📅 Расписание', {
-    attachments: [quickActionsKeyboard('schedule')],
-    format: 'markdown',
-  });
-});
-
-/* ----- /profile ----- */
-bot.command('profile', async (ctx: Context) => {
-  const userId = ctx.user?.user_id ?? ctx.chatId;
-  if (!userId) return ctx.reply('Не удалось определить пользователя.');
-
-  const user = await syncUser({ max_user_id: userId });
-  if (user) {
-    const role = user.role ?? 'не выбрана';
-    const name = [user.first_name, user.last_name].filter(Boolean).join(' ');
-    return ctx.reply(`👤 Профиль\n\nИмя: ${name}\nРоль: ${getRoleName(role)}`, {
-      attachments: [quickActionsKeyboard('profile')],
-      format: 'markdown',
-    });
-  }
-  return ctx.reply('👤 Профиль\n\nВы не зарегистрированы. Используйте /start', {
-    attachments: [quickActionsKeyboard('profile')],
-    format: 'markdown',
-  });
-});
-
-/* ----- Выбор роли: action role_* ----- */
+/* ----- Выбор роли: нажатие на callback-кнопку (Абитуриент / Студент / Сотрудник / Администрация) ----- */
 bot.action(/^role_(.+)$/, async (ctx: Context & { match?: string[] }) => {
   const role = ctx.match?.[1] ?? '';
   const userId = ctx.user?.user_id ?? ctx.chatId;
@@ -118,60 +60,22 @@ bot.action(/^role_(.+)$/, async (ctx: Context & { match?: string[] }) => {
   await setUserRole(userId, role, 1);
   await ctx.answerOnCallback({ notification: `Роль выбрана: ${getRoleName(role)}` });
 
-  const text = `✅ Вы выбрали роль: **${getRoleName(role)}**\n\nНажмите кнопку ниже, чтобы открыть приложение — в нём будут сохранены ваше имя, фамилия и роль.`;
-  await ctx.reply(text, {
-    attachments: [welcomeOpenAppKeyboard(role)],
-    format: 'markdown',
-  });
-});
-
-/* ----- Выбор блока: action block_* ----- */
-bot.action(/^block_(.+)$/, async (ctx: Context & { match?: string[] }) => {
-  const block = ctx.match?.[1] ?? '';
-  const title = getBlockTitle(block);
-
-  await ctx.answerOnCallback({ notification: `Открываю ${title}` });
-
-  const text = `**${title}**\n\nВыберите действие или откройте полную версию в приложении:`;
-  return ctx.reply(text, {
-    attachments: [quickActionsKeyboard(block)],
-    format: 'markdown',
-  });
-});
-
-/* ----- Назад в меню ----- */
-bot.action('back_to_menu', async (ctx: Context) => {
-  const userId = ctx.user?.user_id ?? ctx.chatId;
-  if (!userId) return;
-
-  await ctx.answerOnCallback({ notification: 'Возвращаюсь в меню' });
-
-  const user = await syncUser({ max_user_id: userId });
-  const role = user?.role ?? 'student';
-
-  return ctx.reply('📱 Главное меню\n\nВыберите раздел:', {
-    attachments: [mainMenuKeyboard(role)],
-    format: 'markdown',
-  });
+  return ctx.reply(
+    `✅ Вы выбрали роль: **${getRoleName(role)}**.\n\nНажмите кнопку ниже, чтобы открыть приложение:`,
+    { attachments: [welcomeOpenAppKeyboard(role)], format: 'markdown' }
+  );
 });
 
 /* ----- Любое другое сообщение ----- */
 bot.on('message_created', (ctx: Context) => {
   const text = ctx.message?.body?.text?.trim();
   if (text?.startsWith('/')) {
-    return ctx.reply('Я не знаю такой команды.\n\nИспользуйте /start или /help.');
+    return ctx.reply('Я не знаю такой команды. Используйте /start.');
   }
   if (text) {
-    return ctx.reply('Я не знаю такой команды.\n\nИспользуйте /start или /help.');
+    return ctx.reply('Я не знаю такой команды. Используйте /start.');
   }
-});
-
-/* ----- bot_started (start_payload) ----- */
-bot.on('bot_started', async (ctx: Context & { startPayload?: string }) => {
-  const payload = ctx.startPayload;
-  if (payload) {
-    return ctx.reply(`Bot started with payload: ${payload}`);
-  }
+  return undefined;
 });
 
 bot.start();
