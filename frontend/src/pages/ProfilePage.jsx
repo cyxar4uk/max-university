@@ -1,6 +1,18 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import {
+  Panel,
+  Container,
+  Flex,
+  Avatar,
+  Typography,
+  CellList,
+  CellHeader,
+  CellSimple,
+  CellAction,
+  Button,
+} from '@maxhub/max-ui';
 import { useMAXBridge } from '../useMAXBridge.js';
 import { getDisplayUser } from '../utils/displayUser.js';
 import UserSwitcher from '../UserSwitcher.jsx';
@@ -20,113 +32,97 @@ const ProfilePage = () => {
   const { displayName, avatarUrl } = getDisplayUser(userInfo, user);
 
   const currentRoleLabel = user.role ? (roleNames[user.role] || user.role) : null;
+  const initial = (displayName || 'П').charAt(0).toUpperCase();
 
   return (
-    <div className="page profile-page">
+    <Panel mode="secondary" className="profile-page-panel">
       <header className="profile-page-header">
-        <button
-          type="button"
+        <Button
+          mode="tertiary"
+          appearance="neutral"
+          size="small"
           className="profile-page-back"
           onClick={() => navigate(-1)}
           aria-label="Назад"
         >
           ‹
-        </button>
+        </Button>
       </header>
 
-      <div className="profile-page-hero">
-        <div className="profile-page-avatar-wrap">
-          {avatarUrl ? (
-            <img src={avatarUrl} alt="" className="profile-page-avatar-img" />
-          ) : (
-            <span className="profile-page-avatar-initial">
-              {displayName.charAt(0).toUpperCase() || '👤'}
-            </span>
-          )}
-        </div>
-        <h1 className="profile-page-name">{displayName}</h1>
-        {currentRoleLabel && (
-          <p className="profile-page-role">{currentRoleLabel}</p>
-        )}
-      </div>
+      <Container className="profile-page-hero">
+        <Flex direction="column" align="center" gap={16}>
+          <Avatar.Container size={96} form="circle" className="profile-page-avatar-wrap">
+            {avatarUrl ? (
+              <Avatar.Image src={avatarUrl} alt="" fallback={initial} />
+            ) : (
+              <Avatar.Text gradient="blue">{initial}</Avatar.Text>
+            )}
+          </Avatar.Container>
+          <Flex direction="column" align="center" gap={4}>
+            <Typography.Headline variant="large-strong">{displayName}</Typography.Headline>
+            {currentRoleLabel && (
+              <Typography.Body variant="small" className="profile-page-role">
+                {currentRoleLabel}
+              </Typography.Body>
+            )}
+          </Flex>
+        </Flex>
+      </Container>
 
-      <div className="profile-page-sections">
+      <Flex direction="column" gap={16} className="profile-page-sections">
         {/* Общая информация */}
-        <section className="profile-section">
-          <div className="profile-section-header">
-            <h2 className="profile-section-title">Общая информация</h2>
-            <button
-              type="button"
-              className="profile-section-action"
-              onClick={() => {}}
-              aria-label="Изменить"
+        <CellList
+          mode="island"
+          header={
+            <CellHeader
+              after={
+                <Button mode="tertiary" appearance="themed" size="small" onClick={() => {}}>
+                  Изменить
+                </Button>
+              }
             >
-              Изменить
-            </button>
-          </div>
-          <div className="profile-info-block">
-            <div className="profile-info-row">
-              <span className="profile-info-label">Университет</span>
-              <span className="profile-info-value">РАНХиГС</span>
-            </div>
-            <div className="profile-info-row">
-              <span className="profile-info-label">Направление</span>
-              <span className="profile-info-value">Бизнес-информатика</span>
-            </div>
-            <div className="profile-info-row">
-              <span className="profile-info-label">Курс</span>
-              <span className="profile-info-value">1 курс</span>
-            </div>
-          </div>
-        </section>
+              Общая информация
+            </CellHeader>
+          }
+        >
+          <CellSimple height="compact" title="Университет" subtitle="РАНХиГС" showChevron />
+          <CellSimple height="compact" title="Направление" subtitle="Бизнес-информатика" showChevron />
+          <CellSimple height="compact" title="Курс" subtitle="1 курс" showChevron />
+        </CellList>
 
         {/* Тестирование / Смена роли */}
         {user.canChangeRole !== false && (
-          <section className="profile-section">
-            <h2 className="profile-section-title">Тестирование</h2>
-            <div className="profile-section-role-row">
-              <span className="profile-section-role-current">{currentRoleLabel || '—'}</span>
+          <CellList mode="island" header={<CellHeader>Тестирование</CellHeader>}>
+            <Flex align="center" justify="space-between" className="profile-section-role-row">
+              <Typography.Body variant="medium">{currentRoleLabel || '—'}</Typography.Body>
               <UserSwitcher />
-            </div>
-          </section>
+            </Flex>
+          </CellList>
         )}
 
         {user.canChangeRole === false && (
-          <section className="profile-section profile-section--muted">
-            <p className="profile-section-note">
+          <Container className="profile-section--muted">
+            <Typography.Body variant="small" className="profile-section-note">
               Вы вошли по коду приглашения. Смена роли недоступна.
-            </p>
-          </section>
+            </Typography.Body>
+          </Container>
         )}
 
         {/* Помощь и поддержка */}
-        <section className="profile-section">
-          <button
-            type="button"
-            className="profile-section-link"
-            onClick={() => {}}
-            aria-label="Помощь и поддержка"
-          >
-            <span>Помощь и поддержка</span>
-            <span className="profile-section-link-chevron" aria-hidden>›</span>
-          </button>
-        </section>
+        <CellList mode="island">
+          <CellAction onClick={() => {}} showChevron>
+            Помощь и поддержка
+          </CellAction>
+        </CellList>
 
         {/* Что нового */}
-        <section className="profile-section">
-          <button
-            type="button"
-            className="profile-section-link profile-section-link--new"
-            onClick={() => {}}
-            aria-label="Что нового"
-          >
-            <span>Что нового</span>
-            <span className="profile-section-link-dot" aria-hidden />
-            <span className="profile-section-link-chevron" aria-hidden>›</span>
-          </button>
-        </section>
-      </div>
-    </div>
+        <CellList mode="island">
+          <CellAction onClick={() => {}} showChevron>
+            Что нового
+          </CellAction>
+        </CellList>
+      </Flex>
+    </Panel>
   );
 };
 

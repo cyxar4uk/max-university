@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { Panel, Typography, Button, Avatar } from '@maxhub/max-ui';
 import { useMAXBridge } from '../useMAXBridge.js';
 import apiService from '../api-service.js';
 import { getDisplayUser } from '../utils/displayUser.js';
@@ -98,6 +99,7 @@ const HubPage = () => {
 
   return (
     <div className="hub-page">
+      <Panel mode="secondary" className="hub-page-panel">
       <AppHeader
         variant="hub"
         displayName={displayName}
@@ -114,11 +116,13 @@ const HubPage = () => {
                 onClick={() => setStoriesViewerIndex(index)}
                 title={story.authorName}
               >
-                {story.avatarUrl ? (
-                  <img src={story.avatarUrl} alt="" />
-                ) : (
-                  <span>{(story.authorName || '?').charAt(0)}</span>
-                )}
+                <Avatar.Container size={40} form="circle">
+                  {story.avatarUrl ? (
+                    <Avatar.Image src={story.avatarUrl} alt="" fallback={(story.authorName || '?').charAt(0)} />
+                  ) : (
+                    <Avatar.Text gradient="blue">{(story.authorName || '?').charAt(0)}</Avatar.Text>
+                  )}
+                </Avatar.Container>
               </button>
             ))}
           </div>
@@ -133,22 +137,24 @@ const HubPage = () => {
       <main className="hub-content">
         {/* Ближайшие события — первым блоком, карточка или пустое состояние */}
         <section className="hub-section hub-events-section">
-          <h2 className="hub-section-title">Ближайшие события</h2>
+          <Typography.Headline variant="medium" className="hub-section-title">Ближайшие события</Typography.Headline>
           <HubEventsWidget limit={3} showCardLayout showEmptyState />
         </section>
 
         {/* Лента новостей с «Настроить» (выбор источников) */}
         <section className="hub-section hub-feed-section">
           <div className="hub-feed-section-header">
-            <h2 className="hub-section-title">Лента новостей</h2>
-            <button
-              type="button"
+            <Typography.Headline variant="medium" className="hub-section-title">Лента новостей</Typography.Headline>
+            <Button
+              mode="tertiary"
+              appearance="themed"
+              size="small"
               className="hub-feed-configure"
               onClick={() => setSourcesModalOpen(true)}
               aria-label="Настроить источники"
             >
               Настроить
-            </button>
+            </Button>
           </div>
           <div className="hub-feed-list">
             {feedLoading && feedPosts.length === 0 ? (
@@ -158,20 +164,20 @@ const HubPage = () => {
                 {feedPosts.map((post) => (
                   <li key={post.id} className="feed-post-card">
                     <div className="feed-post-author">
-                      <div className="feed-post-author-avatar">
-                        {(post.channelUsername || post.channel || 'К').charAt(0).toUpperCase()}
-                      </div>
+                      <Avatar.Container size={36} form="circle" className="feed-post-author-avatar">
+                        <Avatar.Text gradient="blue">{(post.channelUsername || post.channel || 'К').charAt(0).toUpperCase()}</Avatar.Text>
+                      </Avatar.Container>
                       <div className="feed-post-author-info">
-                        <span className="feed-post-author-name">{post.channelUsername || post.channel || 'Канал'}</span>
+                        <Typography.Body variant="small-strong" className="feed-post-author-name">{post.channelUsername || post.channel || 'Канал'}</Typography.Body>
                         {(post.subscribers != null || post.subscriber_count != null) && (
-                          <span className="feed-post-author-subscribers">
+                          <Typography.Body variant="small" className="feed-post-author-subscribers">
                             {(post.subscribers ?? post.subscriber_count ?? 0).toLocaleString('ru-RU')} подписчиков
-                          </span>
+                          </Typography.Body>
                         )}
                       </div>
-                      <span className="feed-post-date">{formatPostDate(post.date)}</span>
+                      <Typography.Label variant="small" className="feed-post-date">{formatPostDate(post.date)}</Typography.Label>
                     </div>
-                    <div className="feed-post-text">{post.text}</div>
+                    <Typography.Body variant="medium" className="feed-post-text">{post.text}</Typography.Body>
                     {(post.tema?.length > 0 || post.link) && (
                       <div className="feed-post-footer">
                         {post.tema?.length > 0 && (
@@ -200,14 +206,16 @@ const HubPage = () => {
               </div>
             )}
             {feedOffset < feedTotal && feedPosts.length > 0 && (
-              <button
-                type="button"
+              <Button
+                mode="secondary"
+                appearance="neutral"
                 className="hub-feed-more"
                 onClick={loadMore}
                 disabled={feedLoading}
+                loading={feedLoading}
               >
                 {feedLoading ? 'Загрузка…' : 'Ещё'}
-              </button>
+              </Button>
             )}
           </div>
         </section>
@@ -227,6 +235,7 @@ const HubPage = () => {
         selectedSources={selectedSources}
         onSave={handleSaveSources}
       />
+      </Panel>
     </div>
   );
 };

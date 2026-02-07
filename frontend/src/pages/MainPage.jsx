@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { Panel, Flex, Typography, Button, Avatar } from '@maxhub/max-ui';
 import { useMAXBridge } from '../useMAXBridge.js';
 import apiService from '../api-service.js';
 import { getDisplayUser } from '../utils/displayUser.js';
@@ -111,6 +112,7 @@ const MainPage = () => {
 
   return (
     <div className="main-page">
+      <Panel mode="secondary" className="main-page-panel">
       <AppHeader
         variant="main"
         displayName={displayName}
@@ -133,17 +135,18 @@ const MainPage = () => {
       <main className="main-page-content">
         {/* Инструменты: заголовок + Настроить, карточка «Следующая пара» + QR и Мероприятия */}
         <section className="main-page-tools">
-          <div className="main-page-tools-header">
-            <h2 className="main-page-section-title">Инструменты</h2>
-            <button
-              type="button"
-              className="main-page-tools-configure"
+          <Flex justify="space-between" align="center" className="main-page-tools-header">
+            <Typography.Headline variant="medium">Инструменты</Typography.Headline>
+            <Button
+              mode="tertiary"
+              appearance="themed"
+              size="small"
               onClick={() => navigate('/profile')}
               aria-label="Настроить"
             >
               Настроить
-            </button>
-          </div>
+            </Button>
+          </Flex>
           <div className="main-page-widgets">
             <div className="main-page-widget-schedule">
               <ScheduleWidget variant="main" block={{ block_type: 'schedule', name: 'Расписание' }} apiService={apiService} />
@@ -172,7 +175,7 @@ const MainPage = () => {
 
         {/* Актуальные истории */}
         <section className="main-page-stories">
-          <h2 className="main-page-section-title">Актуальные истории</h2>
+          <Typography.Headline variant="medium" className="main-page-section-title">Актуальные истории</Typography.Headline>
           <div className="main-page-stories-track">
             <div className="main-page-story main-page-story-add" aria-hidden="true">+</div>
             {MOCK_STORIES.map((story, index) => (
@@ -182,14 +185,14 @@ const MainPage = () => {
                 className={`main-page-story-card ${index < 2 ? 'main-page-story-card--gradient' : ''}`}
                 onClick={() => setStoriesViewerIndex(index)}
               >
-                <div className="main-page-story-card-preview">
+                <Avatar.Container size={56} form="circle" className="main-page-story-card-preview">
                   {story.avatarUrl ? (
-                    <img src={story.avatarUrl} alt="" />
+                    <Avatar.Image src={story.avatarUrl} alt="" fallback={(story.authorName || '?').charAt(0).toUpperCase()} />
                   ) : (
-                    (story.authorName || '?').charAt(0).toUpperCase()
+                    <Avatar.Text gradient="blue">{(story.authorName || '?').charAt(0).toUpperCase()}</Avatar.Text>
                   )}
-                </div>
-                <span className="main-page-story-card-name">{story.authorName}</span>
+                </Avatar.Container>
+                <Typography.Body variant="small" className="main-page-story-card-name">{story.authorName}</Typography.Body>
               </button>
             ))}
           </div>
@@ -197,27 +200,27 @@ const MainPage = () => {
 
         {/* Лента новостей */}
         <section className="main-page-feed">
-          <h2 className="main-page-section-title">Лента новостей</h2>
+          <Typography.Headline variant="medium" className="main-page-section-title">Лента новостей</Typography.Headline>
           <div className="main-page-feed-list">
             {filteredPosts.length > 0 ? (
               <ul className="main-page-feed-posts">
                 {filteredPosts.map((post) => (
                   <li key={post.id} className="feed-post-card">
                     <div className="feed-post-author">
-                      <div className="feed-post-author-avatar">
-                        {(post.channelUsername || post.channel || 'К').charAt(0).toUpperCase()}
-                      </div>
+                      <Avatar.Container size={36} form="circle" className="feed-post-author-avatar">
+                        <Avatar.Text gradient="blue">{(post.channelUsername || post.channel || 'К').charAt(0).toUpperCase()}</Avatar.Text>
+                      </Avatar.Container>
                       <div className="feed-post-author-info">
-                        <span className="feed-post-author-name">{post.channelUsername || post.channel || 'Канал'}</span>
+                        <Typography.Body variant="small-strong" className="feed-post-author-name">{post.channelUsername || post.channel || 'Канал'}</Typography.Body>
                         {(post.subscribers != null || post.subscriber_count != null) && (
-                          <span className="feed-post-author-subscribers">
+                          <Typography.Body variant="small" className="feed-post-author-subscribers">
                             {(post.subscribers ?? post.subscriber_count ?? 0).toLocaleString('ru-RU')} подписчиков
-                          </span>
+                          </Typography.Body>
                         )}
                       </div>
-                      <span className="feed-post-date">{formatPostDate(post.date)}</span>
+                      <Typography.Label variant="small" className="feed-post-date">{formatPostDate(post.date)}</Typography.Label>
                     </div>
-                    <div className="feed-post-text">{post.text}</div>
+                    <Typography.Body variant="medium" className="feed-post-text">{post.text}</Typography.Body>
                     {(post.tema?.length > 0 || post.link) && (
                       <div className="feed-post-footer">
                         {post.tema?.length > 0 && (
@@ -244,14 +247,16 @@ const MainPage = () => {
               </div>
             )}
             {feedHasMore && filteredPosts.length > 0 && (
-              <button
-                type="button"
+              <Button
+                mode="secondary"
+                appearance="neutral"
                 className="main-page-feed-more"
                 onClick={loadMore}
                 disabled={feedLoading}
+                loading={feedLoading}
               >
                 {feedLoading ? 'Загрузка…' : 'Ещё'}
-              </button>
+              </Button>
             )}
           </div>
         </section>
@@ -302,6 +307,7 @@ const MainPage = () => {
           </div>
         </div>
       )}
+      </Panel>
     </div>
   );
 };

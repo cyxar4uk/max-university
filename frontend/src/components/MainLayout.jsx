@@ -1,5 +1,6 @@
 import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Typography } from '@maxhub/max-ui';
 
 const baseUrl = typeof import.meta.env?.BASE_URL === 'string' ? import.meta.env.BASE_URL : '/';
 const icon = (name) => `${baseUrl}icons/${name}.svg`;
@@ -48,7 +49,7 @@ const MainLayout = () => {
           <span className="nav-icon nav-icon-svg" aria-hidden>
             <img src={icon('iconhome')} alt="" width={24} height={24} />
           </span>
-          <span className="nav-label">Главная</span>
+          <Typography.Action variant="small" className="nav-label">Главная</Typography.Action>
         </button>
         <button
           className={`nav-item ${isHub ? 'active' : ''}`}
@@ -58,7 +59,7 @@ const MainLayout = () => {
           <span className="nav-icon nav-icon-svg" aria-hidden>
             <img src={icon('iconhub')} alt="" width={24} height={24} />
           </span>
-          <span className="nav-label">Хаб</span>
+          <Typography.Action variant="small" className="nav-label">Хаб</Typography.Action>
         </button>
         <button
           className={`nav-item ${isStudy ? 'active' : ''}`}
@@ -68,7 +69,7 @@ const MainLayout = () => {
           <span className="nav-icon nav-icon-svg" aria-hidden>
             <img src={icon('iconedu')} alt="" width={24} height={24} />
           </span>
-          <span className="nav-label">Учёба</span>
+          <Typography.Action variant="small" className="nav-label">Учёба</Typography.Action>
         </button>
       </nav>
     </div>

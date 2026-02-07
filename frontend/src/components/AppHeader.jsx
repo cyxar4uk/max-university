@@ -1,9 +1,9 @@
 import React from 'react';
+import { Avatar, Typography } from '@maxhub/max-ui';
 
 /**
  * Единый хедер приложения (Главная, Хаб и др.).
- * Слева: аватар + опционально приветствие. В центре: опциональный контент (сторис и т.д.). Справа: кнопка поиска или другая.
- * Данные пользователя (displayName, avatarUrl) должны приходить из MAX Bridge и сохраняться в БД — один источник правды.
+ * MAX UI: Avatar, Typography. Слева: аватар + опционально приветствие. В центре: опциональный контент. Справа: кнопка поиска или другая.
  */
 const AppHeader = ({
   displayName,
@@ -17,6 +17,7 @@ const AppHeader = ({
   className = '',
 }) => {
   const isMain = variant === 'main';
+  const initial = (displayName || 'П').charAt(0).toUpperCase();
 
   return (
     <header className={`app-header app-header--white ${className}`.trim()} role="banner">
@@ -27,19 +28,23 @@ const AppHeader = ({
           onClick={onProfileClick}
           aria-label="Профиль"
         >
-          <span className="app-header__avatar">
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="" />
-            ) : (
-              <span className="app-header__avatar-initial" aria-hidden>
-                {(displayName || 'П').charAt(0).toUpperCase()}
-              </span>
-            )}
+          <span className="app-header__avatar app-header__avatar--max-ui">
+            <Avatar.Container size={40} form="circle">
+              {avatarUrl ? (
+                <Avatar.Image src={avatarUrl} fallback={initial} alt="" />
+              ) : (
+                <Avatar.Text gradient="blue">{initial}</Avatar.Text>
+              )}
+            </Avatar.Container>
           </span>
           {isMain && greeting != null && (
             <div className="app-header__greeting-block">
-              <span className="app-header__greeting-line">{greeting},</span>
-              <span className="app-header__greeting-name">{firstName ?? (displayName || '').split(' ')[0]}</span>
+              <Typography.Body variant="small" className="app-header__greeting-line">
+                {greeting},
+              </Typography.Body>
+              <Typography.Title variant="small" className="app-header__greeting-name">
+                {firstName ?? (displayName || '').split(' ')[0]}
+              </Typography.Title>
             </div>
           )}
         </button>
