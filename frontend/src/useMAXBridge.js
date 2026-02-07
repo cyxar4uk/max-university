@@ -15,50 +15,44 @@ export const useMAXBridge = () => {
 
   useEffect(() => {
     const initBridge = () => {
-      // Проверяем наличие тестового пользователя
-      const testUser = localStorage.getItem('testUser');
-      
-      if (testUser) {
-        // Используем тестового пользователя
-        const user = JSON.parse(testUser);
-        setUserInfo(user);
-        setPlatform('test');
-        setVersion('1.0-test');
-        setIsInitialized(true);
-        console.log('Using test user:', user);
-        return;
-      }
-
+      // Сначала проверяем MAX Bridge: реальные имя/фамилия приходят из initDataUnsafe.user
       if (window.WebApp) {
         try {
           window.WebApp.ready();
           const userData = window.WebApp.initDataUnsafe?.user;
           if (userData) {
             setUserInfo(userData);
+            setPlatform(window.WebApp.platform ?? 'max');
+            setVersion(window.WebApp.version ?? '');
+            setIsInitialized(true);
+            console.log('MAX Bridge: user from initDataUnsafe', userData.first_name, userData.last_name);
+            return;
           }
           const startParams = window.WebApp.initDataUnsafe?.start_param;
-          if (startParams) {
-            setLaunchParams(startParams);
-          }
+          if (startParams) setLaunchParams(startParams);
           setPlatform(window.WebApp.platform);
           setVersion(window.WebApp.version);
           setIsInitialized(true);
-          console.log('MAX Bridge initialized successfully');
+          console.log('MAX Bridge initialized (no user in initDataUnsafe)');
+          return;
         } catch (error) {
           console.error('MAX Bridge initialization error:', error);
-          setIsInitialized(true);
         }
-      } else {
-        console.warn('MAX Bridge not available, using mock mode');
-        // Используем мок-пользователя по умолчанию
-        const mockUser = getMockUserByRole('student');
-        setUserInfo(mockUser);
-        localStorage.setItem('testUser', JSON.stringify(mockUser));
-        setIsInitialized(true);
+      }
+
+      // Нет WebApp или нет user — тестовый пользователь из localStorage (разработка) или мок
+      const testUserJson = localStorage.getItem('testUser');
+      const testUser = testUserJson ? (() => { try { return JSON.parse(testUserJson); } catch { return null; } })() : null;
+      const userToSet = testUser ?? getMockUserByRole('student');
+      setUserInfo(userToSet);
+      setPlatform(testUser ? 'test' : 'web');
+      setVersion('1.0');
+      setIsInitialized(true);
+      if (!window.WebApp) {
+        console.warn('MAX Bridge not available, using mock user');
       }
     };
 
-    // Задержка для уверенности, что window.WebApp загружен
     setTimeout(initBridge, 100);
   }, []);
 
