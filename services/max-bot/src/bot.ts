@@ -11,6 +11,7 @@ const bot = new Bot(token);
 
 bot.api.setMyCommands([
   { name: 'start', description: 'Начать / главное меню' },
+  { name: 'role', description: 'Сменить роль' },
 ]);
 
 /** Приветствие и клавиатура выбора роли (4 кнопки) или кнопка «Открыть приложение», если роль уже выбрана */
@@ -47,6 +48,14 @@ async function sendWelcome(ctx: Context) {
 
 /* ----- /start ----- */
 bot.command('start', (ctx: Context) => sendWelcome(ctx));
+
+/* ----- /role — смена роли (показываем клавиатуру, выбор обновит БД через action role_*) ----- */
+bot.command('role', (ctx: Context) => {
+  return ctx.reply(
+    'Выберите новую роль:',
+    { attachments: [roleSelectionKeyboard()], format: 'markdown' }
+  );
+});
 
 /* ----- bot_started (запуск бота / открытие чата с ботом) — то же приветствие и выбор роли ----- */
 bot.on('bot_started', (ctx: Context & { startPayload?: string }) => sendWelcome(ctx));
