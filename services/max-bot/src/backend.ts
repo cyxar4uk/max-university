@@ -2,7 +2,7 @@ const BACKEND_URL = process.env.BACKEND_URL?.replace(/\/$/, '') || 'http://127.0
 const BOT_SECRET = process.env.BOT_SECRET || process.env.BOT_TOKEN;
 
 export interface SyncUserPayload {
-  max_user_id: number;
+  max_user_id: number | string;
   first_name?: string;
   last_name?: string;
   username?: string | null;
@@ -41,7 +41,7 @@ export async function syncUser(payload: SyncUserPayload): Promise<UserInfo | nul
 }
 
 /** Обновить только роль пользователя. */
-export async function setUserRole(maxUserId: number, role: string, universityId: number = 1): Promise<boolean> {
+export async function setUserRole(maxUserId: number | string, role: string, universityId: number = 1): Promise<boolean> {
   const user = await syncUser({ max_user_id: maxUserId, role, university_id: universityId });
   return user != null;
 }

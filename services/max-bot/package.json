@@ -4,6 +4,7 @@
   "description": "MAX Digital University bot (@maxhub/max-bot-api)",
   "main": "dist/bot.js",
   "scripts": {
+    "postinstall": "node scripts/postinstall.js",
     "build": "tsc",
     "start": "node dist/bot.js",
     "dev": "ts-node src/bot.ts"

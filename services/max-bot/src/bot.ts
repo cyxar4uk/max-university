@@ -1,5 +1,6 @@
+/// <reference path="./context.d.ts" />
 import 'dotenv/config';
-import { Bot, Keyboard } from '@maxhub/max-bot-api';
+import { Bot, Keyboard, Context } from '@maxhub/max-bot-api';
 import {
   roleSelectionKeyboard,
   welcomeOpenAppKeyboard,
@@ -23,7 +24,7 @@ bot.api.setMyCommands([
 ]);
 
 /* ----- /start ----- */
-bot.command('start', async (ctx) => {
+bot.command('start', async (ctx: Context) => {
   const userId = ctx.user?.user_id ?? ctx.chatId;
   if (!userId) return ctx.reply('Не удалось определить пользователя.');
 
@@ -59,7 +60,7 @@ bot.command('start', async (ctx) => {
 });
 
 /* ----- /help ----- */
-bot.command('help', (ctx) => {
+bot.command('help', (ctx: Context) => {
   return ctx.reply(
     `📚 **Доступные команды:**
 
@@ -89,7 +90,7 @@ bot.command('schedule', (ctx) => {
 });
 
 /* ----- /profile ----- */
-bot.command('profile', async (ctx) => {
+bot.command('profile', async (ctx: Context) => {
   const userId = ctx.user?.user_id ?? ctx.chatId;
   if (!userId) return ctx.reply('Не удалось определить пользователя.');
 
@@ -109,8 +110,8 @@ bot.command('profile', async (ctx) => {
 });
 
 /* ----- Выбор роли: action role_* ----- */
-bot.action(/^role_(.+)$/, async (ctx) => {
-  const role = (ctx as { match?: string[] }).match?.[1] ?? '';
+bot.action(/^role_(.+)$/, async (ctx: Context & { match?: string[] }) => {
+  const role = ctx.match?.[1] ?? '';
   const userId = ctx.user?.user_id ?? ctx.chatId;
   if (!userId) return;
 
@@ -125,8 +126,8 @@ bot.action(/^role_(.+)$/, async (ctx) => {
 });
 
 /* ----- Выбор блока: action block_* ----- */
-bot.action(/^block_(.+)$/, async (ctx) => {
-  const block = (ctx as { match?: string[] }).match?.[1] ?? '';
+bot.action(/^block_(.+)$/, async (ctx: Context & { match?: string[] }) => {
+  const block = ctx.match?.[1] ?? '';
   const title = getBlockTitle(block);
 
   await ctx.answerOnCallback({ notification: `Открываю ${title}` });
@@ -139,7 +140,7 @@ bot.action(/^block_(.+)$/, async (ctx) => {
 });
 
 /* ----- Назад в меню ----- */
-bot.action('back_to_menu', async (ctx) => {
+bot.action('back_to_menu', async (ctx: Context) => {
   const userId = ctx.user?.user_id ?? ctx.chatId;
   if (!userId) return;
 
@@ -155,7 +156,7 @@ bot.action('back_to_menu', async (ctx) => {
 });
 
 /* ----- Любое другое сообщение ----- */
-bot.on('message_created', (ctx) => {
+bot.on('message_created', (ctx: Context) => {
   const text = ctx.message?.body?.text?.trim();
   if (text?.startsWith('/')) {
     return ctx.reply('Я не знаю такой команды.\n\nИспользуйте /start или /help.');
@@ -166,8 +167,8 @@ bot.on('message_created', (ctx) => {
 });
 
 /* ----- bot_started (start_payload) ----- */
-bot.on('bot_started', async (ctx) => {
-  const payload = (ctx as unknown as { startPayload?: string }).startPayload;
+bot.on('bot_started', async (ctx: Context & { startPayload?: string }) => {
+  const payload = ctx.startPayload;
   if (payload) {
     return ctx.reply(`Bot started with payload: ${payload}`);
   }
