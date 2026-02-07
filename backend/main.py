@@ -1936,6 +1936,41 @@ async def get_stories_feed_endpoint(
     return {"stories": result}
 
 
+@app.get("/api/stories/my")
+async def get_my_stories_endpoint(
+    user_id: Optional[int] = Header(None, alias="X-MAX-User-ID")
+):
+    """Мои истории для профиля."""
+    user = _require_stories_user(user_id)
+    internal_id = user["id"]
+    items = database.get_my_stories(internal_id)
+    result = []
+    for s in items:
+        result.append({
+            "id": s["id"],
+            "cover_url": s.get("cover_url"),
+            "slide_count": s["slide_count"],
+            "view_count": s.get("view_count", 0),
+            "created_at": s["created_at"],
+            "expires_at": s["expires_at"],
+        })
+    return {"stories": result}
+
+
+@app.get("/api/stories/media")
+async def get_story_media_endpoint(path: str):
+    """Отдать медиафайл истории по безопасному пути (только stories/...)."""
+    safe = database.get_story_media_relative_path(path)
+    if not safe:
+        raise HTTPException(status_code=404, detail="Invalid path")
+    rel = safe.replace("stories/", "").strip("/").replace("/", os.sep)
+    full = (STORIES_MEDIA_DIR / rel).resolve()
+    root = STORIES_MEDIA_DIR.resolve()
+    if not full.exists() or not str(full).startswith(str(root)):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(full)
+
+
 @app.get("/api/stories/{story_id}")
 async def get_story_endpoint(
     story_id: int,
@@ -1979,27 +2014,6 @@ async def record_story_view_endpoint(
     return {"success": True}
 
 
-@app.get("/api/stories/my")
-async def get_my_stories_endpoint(
-    user_id: Optional[int] = Header(None, alias="X-MAX-User-ID")
-):
-    """Мои истории для профиля."""
-    user = _require_stories_user(user_id)
-    internal_id = user["id"]
-    items = database.get_my_stories(internal_id)
-    result = []
-    for s in items:
-        result.append({
-            "id": s["id"],
-            "cover_url": s.get("cover_url"),
-            "slide_count": s["slide_count"],
-            "view_count": s.get("view_count", 0),
-            "created_at": s["created_at"],
-            "expires_at": s["expires_at"],
-        })
-    return {"stories": result}
-
-
 @app.delete("/api/stories/{story_id}")
 async def delete_story_endpoint(
     story_id: int,
@@ -2018,20 +2032,6 @@ async def delete_story_endpoint(
         except Exception:
             pass
     return {"success": True}
-
-
-@app.get("/api/stories/media")
-async def get_story_media_endpoint(path: str):
-    """Отдать медиафайл истории по безопасному пути (только stories/...)."""
-    safe = database.get_story_media_relative_path(path)
-    if not safe:
-        raise HTTPException(status_code=404, detail="Invalid path")
-    rel = safe.replace("stories/", "").strip("/").replace("/", os.sep)
-    full = (STORIES_MEDIA_DIR / rel).resolve()
-    root = STORIES_MEDIA_DIR.resolve()
-    if not full.exists() or not str(full).startswith(str(root)):
-        raise HTTPException(status_code=404, detail="File not found")
-    return FileResponse(full)
 
 # ============ ПАНЕЛЬ СУПЕРАДМИНА ============
 
