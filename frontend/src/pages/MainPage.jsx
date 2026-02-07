@@ -9,7 +9,6 @@ import ScheduleWidget from '../Widgets/ScheduleWidget.jsx';
 import DigitalPassWidget from '../Widgets/DigitalPassWidget.jsx';
 import StoriesViewer from '../components/StoriesViewer.jsx';
 import AppHeader from '../components/AppHeader.jsx';
-import { MOCK_STORIES } from '../mockStories.js';
 
 const EVENTS_BOT_LINK = 'https://t.me/event_ranepa_bot';
 const baseUrl = typeof import.meta.env?.BASE_URL === 'string' ? import.meta.env.BASE_URL : '/';
@@ -41,7 +40,10 @@ const MainPage = () => {
   const [feedOffset, setFeedOffset] = useState(0);
   const [feedLoading, setFeedLoading] = useState(false);
   const [feedHasMore, setFeedHasMore] = useState(true);
+  const [storiesFeed, setStoriesFeed] = useState([]);
+  const [storiesFeedLoading, setStoriesFeedLoading] = useState(true);
   const [storiesViewerIndex, setStoriesViewerIndex] = useState(null);
+  const [storyDetailForViewer, setStoryDetailForViewer] = useState(null);
   const feedLimit = 20;
 
   useEffect(() => {
@@ -84,6 +86,37 @@ const MainPage = () => {
   useEffect(() => {
     loadFeed(false);
   }, []);
+
+  const universityIdForStories = user.universityId || parseInt(localStorage.getItem('universityId') || '1', 10);
+  useEffect(() => {
+    let cancelled = false;
+    setStoriesFeedLoading(true);
+    apiService.getStoriesFeed({ university_id: universityIdForStories, limit: 50 }).then((data) => {
+      if (!cancelled) setStoriesFeed(data.stories || []);
+    }).catch(() => { if (!cancelled) setStoriesFeed([]); }).finally(() => { if (!cancelled) setStoriesFeedLoading(false); });
+    return () => { cancelled = true; };
+  }, [universityIdForStories]);
+
+  useEffect(() => {
+    if (storiesViewerIndex == null || !storiesFeed[storiesViewerIndex]) {
+      setStoryDetailForViewer(null);
+      return;
+    }
+    const id = storiesFeed[storiesViewerIndex].id;
+    let cancelled = false;
+    apiService.getStory(id).then((story) => {
+      if (!cancelled && story) {
+        const slides = (story.slides || []).map((s) => {
+          if (s.type === 'image' || s.type === 'video') {
+            return { type: s.type, url: apiService.getStoryMediaUrl(s.media_url), duration_sec: s.duration_sec };
+          }
+          return { type: 'text', text: s.text || '' };
+        });
+        setStoryDetailForViewer({ id: story.id, authorName: story.author_name, avatarUrl: story.avatar_url || null, slides });
+      }
+    }).catch(() => { if (!cancelled) setStoryDetailForViewer(null); });
+    return () => { cancelled = true; };
+  }, [storiesViewerIndex, storiesFeed]);
 
   const loadMore = useCallback(() => {
     if (feedHasMore && !feedLoading) loadFeed(true);
@@ -177,22 +210,35 @@ const MainPage = () => {
         <section className="main-page-stories">
           <Typography.Headline variant="medium" className="main-page-section-title">Актуальные истории</Typography.Headline>
           <div className="main-page-stories-track">
-            <div className="main-page-story main-page-story-add" aria-hidden="true">+</div>
-            {MOCK_STORIES.map((story, index) => (
+            <button
+              type="button"
+              className="main-page-story main-page-story-add"
+              onClick={() => navigate('/profile?tab=stories')}
+              aria-label="Добавить историю"
+            >
+              +
+            </button>
+            {!storiesFeedLoading && storiesFeed.map((story, index) => (
               <button
                 key={story.id}
                 type="button"
                 className={`main-page-story-card ${index < 2 ? 'main-page-story-card--gradient' : ''}`}
                 onClick={() => setStoriesViewerIndex(index)}
               >
-                <Avatar.Container size={56} form="circle" className="main-page-story-card-preview">
-                  {story.avatarUrl ? (
-                    <Avatar.Image src={story.avatarUrl} alt="" fallback={(story.authorName || '?').charAt(0).toUpperCase()} />
+                <div className="main-page-story-card-preview">
+                  {story.cover_url ? (
+                    <img src={apiService.getStoryMediaUrl(story.cover_url)} alt="" />
                   ) : (
-                    <Avatar.Text gradient="blue">{(story.authorName || '?').charAt(0).toUpperCase()}</Avatar.Text>
+                    <Avatar.Container size={56} form="circle">
+                      {story.avatar_url ? (
+                        <Avatar.Image src={story.avatar_url} alt="" fallback={(story.author_name || '?').charAt(0).toUpperCase()} />
+                      ) : (
+                        <Avatar.Text gradient="blue">{(story.author_name || '?').charAt(0).toUpperCase()}</Avatar.Text>
+                      )}
+                    </Avatar.Container>
                   )}
-                </Avatar.Container>
-                <Typography.Body variant="small" className="main-page-story-card-name">{story.authorName}</Typography.Body>
+                </div>
+                <Typography.Body variant="small" className="main-page-story-card-name">{story.author_name}</Typography.Body>
               </button>
             ))}
           </div>
@@ -288,11 +334,13 @@ const MainPage = () => {
       )}
 
       {/* Просмотр сторис */}
-      {storiesViewerIndex !== null && (
+      {storiesViewerIndex !== null && storyDetailForViewer && (
         <StoriesViewer
-          stories={MOCK_STORIES}
-          startStoryIndex={storiesViewerIndex}
-          onClose={() => setStoriesViewerIndex(null)}
+          stories={[storyDetailForViewer]}
+          startStoryIndex={0}
+          onClose={() => { setStoriesViewerIndex(null); setStoryDetailForViewer(null); }}
+          storyId={storiesFeed[storiesViewerIndex]?.id}
+          onViewRecorded={apiService.recordStoryView}
         />
       )}
 

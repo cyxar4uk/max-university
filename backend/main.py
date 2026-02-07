@@ -10,8 +10,9 @@ for name in (".env.events", ".env.database", ".env", ".env.bot"):
         load_dotenv(p)
     load_dotenv(Path.cwd() / name)  # на сервере WorkingDirectory=backend, cwd тоже подойдёт
 
-from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks, Request
+from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks, Request, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import uvicorn
@@ -20,6 +21,9 @@ import hmac
 import hashlib
 import httpx
 from datetime import datetime
+import uuid
+import shutil
+import sqlite3
 import database
 
 app = FastAPI(title="Digital University MAX Bot + Mini-App", version="2.0.0")
@@ -1792,6 +1796,227 @@ async def review_application_endpoint(
     database.review_application(application_id, internal_user_id, data.status, data.review_notes)
     
     return {"success": True, "message": f"Application {data.status}"}
+
+# ============ STORIES API ============
+
+STORIES_MEDIA_DIR = Path(database.DB_DIR) / "stories"
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+ALLOWED_VIDEO_TYPES = {"video/mp4"}
+MAX_IMAGE_BYTES = 5 * 1024 * 1024   # 5 MB
+MAX_VIDEO_BYTES = 15 * 1024 * 1024  # 15 MB
+STORIES_UPLOAD_RATE_PER_HOUR = 30
+STORIES_CREATE_RATE_PER_DAY = 20
+
+_stories_upload_count: Dict[int, List[float]] = {}  # max_user_id -> list of timestamps
+_stories_create_count: Dict[int, List[float]] = {}  # max_user_id -> list of (date, count) or just timestamps
+
+
+def _require_stories_user(header_user_id: Optional[int]) -> Dict:
+    if not header_user_id:
+        header_user_id = 10001
+    user = database.get_user(header_user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
+class StorySlideCreate(BaseModel):
+    type: str  # image | video | text
+    media_url: Optional[str] = None
+    text: Optional[str] = None
+    duration_sec: Optional[float] = None
+
+
+class StoryCreate(BaseModel):
+    slides: List[StorySlideCreate]
+    university_id: int = 1
+
+
+@app.post("/api/stories/upload-media")
+async def upload_story_media(
+    file: UploadFile = File(...),
+    user_id: Optional[int] = Header(None, alias="X-MAX-User-ID")
+):
+    """Загрузить один файл (фото/видео) для истории. Возвращает media_url для передачи в POST /api/stories."""
+    _require_stories_user(user_id)
+    content_type = (file.content_type or "").strip().lower()
+    if content_type not in ALLOWED_IMAGE_TYPES and content_type not in ALLOWED_VIDEO_TYPES:
+        raise HTTPException(status_code=400, detail="Allowed types: image/jpeg, image/png, image/webp, video/mp4")
+    contents = await file.read()
+    max_size = MAX_VIDEO_BYTES if content_type in ALLOWED_VIDEO_TYPES else MAX_IMAGE_BYTES
+    if len(contents) > max_size:
+        raise HTTPException(status_code=400, detail=f"File too large (max {max_size // (1024*1024)} MB)")
+    ext = "jpg" if "jpeg" in content_type else "png" if "png" in content_type else "webp" if "webp" in content_type else "mp4"
+    pending_dir = STORIES_MEDIA_DIR / "_pending"
+    pending_dir.mkdir(parents=True, exist_ok=True)
+    name = f"{uuid.uuid4().hex}.{ext}"
+    path = pending_dir / name
+    with open(path, "wb") as f:
+        f.write(contents)
+    media_url = f"stories/_pending/{name}"
+    return {"media_url": media_url}
+
+
+@app.post("/api/stories")
+async def create_story_endpoint(
+    data: StoryCreate,
+    user_id: Optional[int] = Header(None, alias="X-MAX-User-ID")
+):
+    """Создать историю из загруженных слайдов."""
+    user = _require_stories_user(user_id)
+    internal_id = user["id"]
+    university_id = user.get("university_id") or data.university_id
+    if not data.slides:
+        raise HTTPException(status_code=400, detail="At least one slide required")
+    slides_data = [{"type": s.type, "media_url": s.media_url, "text": s.text, "duration_sec": s.duration_sec} for s in data.slides]
+    story_id = database.create_story(internal_id, university_id, slides_data, status="published")
+    base_dir = STORIES_MEDIA_DIR / str(story_id)
+    base_dir.mkdir(parents=True, exist_ok=True)
+    for i, slide in enumerate(data.slides):
+        if slide.media_url and slide.media_url.startswith("stories/_pending/"):
+            parts = slide.media_url.replace("\\", "/").split("/")
+            old_path = STORIES_MEDIA_DIR / parts[1] / parts[2] if len(parts) >= 3 else STORIES_MEDIA_DIR / "_pending" / parts[-1]
+            if not old_path.exists():
+                old_path = STORIES_MEDIA_DIR / "_pending" / (slide.media_url.split("/")[-1] if "/" in slide.media_url else slide.media_url)
+            if old_path.exists():
+                ext = old_path.suffix or ".jpg"
+                new_name = f"{i}{ext}"
+                new_path = base_dir / new_name
+                shutil.move(str(old_path), str(new_path))
+                rel = f"stories/{story_id}/{new_name}"
+                conn = sqlite3.connect(database.UNIVERSITIES_DB_PATH)
+                cursor = conn.cursor()
+                cursor.execute("UPDATE story_slides SET media_url = ? WHERE story_id = ? AND position = ?", (rel, story_id, i))
+                conn.commit()
+                conn.close()
+    return {"success": True, "story_id": story_id}
+
+
+@app.get("/api/stories/feed")
+async def get_stories_feed_endpoint(
+    university_id: Optional[int] = None,
+    limit: int = 50,
+    offset: int = 0,
+    user_id: Optional[int] = Header(None, alias="X-MAX-User-ID")
+):
+    """Лента историй для главной/хаба."""
+    user = _require_stories_user(user_id)
+    uid = user.get("university_id") or university_id or 1
+    items = database.get_stories_feed(uid, limit=limit, offset=offset)
+    result = []
+    for s in items:
+        author = database.get_user_by_id(s["author_id"])
+        result.append({
+            "id": s["id"],
+            "author_id": s["author_id"],
+            "author_name": f"{author.get('first_name', '')} {author.get('last_name', '')}".strip() or "Пользователь" if author else "Пользователь",
+            "avatar_url": author.get("photo_url") if author else None,
+            "university_id": s["university_id"],
+            "cover_url": s.get("cover_url"),
+            "slide_count": s["slide_count"],
+            "view_count": s.get("view_count", 0),
+            "created_at": s["created_at"],
+            "expires_at": s["expires_at"],
+        })
+    return {"stories": result}
+
+
+@app.get("/api/stories/{story_id}")
+async def get_story_endpoint(
+    story_id: int,
+    user_id: Optional[int] = Header(None, alias="X-MAX-User-ID")
+):
+    """Детали одной истории (все слайды) для просмотра."""
+    _require_stories_user(user_id)
+    story = database.get_story(story_id, include_expired=False)
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found or expired")
+    author = database.get_user_by_id(story["author_id"])
+    slides_out = []
+    for sl in story.get("slides", []):
+        slides_out.append({
+            "type": sl["type"],
+            "media_url": sl.get("media_url"),
+            "text": sl.get("text"),
+            "duration_sec": sl.get("duration_sec"),
+        })
+    return {
+        "id": story["id"],
+        "author_id": story["author_id"],
+        "author_name": f"{author.get('first_name', '')} {author.get('last_name', '')}".strip() or "Пользователь" if author else "Пользователь",
+        "avatar_url": author.get("photo_url") if author else None,
+        "slides": slides_out,
+        "view_count": story.get("view_count", 0),
+        "expires_at": story["expires_at"],
+    }
+
+
+@app.post("/api/stories/{story_id}/view")
+async def record_story_view_endpoint(
+    story_id: int,
+    slide_reached: Optional[int] = None,
+    user_id: Optional[int] = Header(None, alias="X-MAX-User-ID")
+):
+    """Зафиксировать просмотр истории."""
+    user = _require_stories_user(user_id)
+    internal_id = user["id"]
+    database.record_story_view(story_id, internal_id, slide_reached=slide_reached)
+    return {"success": True}
+
+
+@app.get("/api/stories/my")
+async def get_my_stories_endpoint(
+    user_id: Optional[int] = Header(None, alias="X-MAX-User-ID")
+):
+    """Мои истории для профиля."""
+    user = _require_stories_user(user_id)
+    internal_id = user["id"]
+    items = database.get_my_stories(internal_id)
+    result = []
+    for s in items:
+        result.append({
+            "id": s["id"],
+            "cover_url": s.get("cover_url"),
+            "slide_count": s["slide_count"],
+            "view_count": s.get("view_count", 0),
+            "created_at": s["created_at"],
+            "expires_at": s["expires_at"],
+        })
+    return {"stories": result}
+
+
+@app.delete("/api/stories/{story_id}")
+async def delete_story_endpoint(
+    story_id: int,
+    user_id: Optional[int] = Header(None, alias="X-MAX-User-ID")
+):
+    """Удалить свою историю."""
+    user = _require_stories_user(user_id)
+    internal_id = user["id"]
+    if not database.delete_story(story_id, internal_id):
+        raise HTTPException(status_code=404, detail="Story not found or not yours")
+    import pathlib
+    story_dir = STORIES_MEDIA_DIR / str(story_id)
+    if story_dir.exists():
+        try:
+            shutil.rmtree(story_dir)
+        except Exception:
+            pass
+    return {"success": True}
+
+
+@app.get("/api/stories/media")
+async def get_story_media_endpoint(path: str):
+    """Отдать медиафайл истории по безопасному пути (только stories/...)."""
+    safe = database.get_story_media_relative_path(path)
+    if not safe:
+        raise HTTPException(status_code=404, detail="Invalid path")
+    rel = safe.replace("stories/", "").strip("/").replace("/", os.sep)
+    full = (STORIES_MEDIA_DIR / rel).resolve()
+    root = STORIES_MEDIA_DIR.resolve()
+    if not full.exists() or not str(full).startswith(str(root)):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(full)
 
 # ============ ПАНЕЛЬ СУПЕРАДМИНА ============
 

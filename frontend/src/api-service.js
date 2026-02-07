@@ -624,6 +624,85 @@ class UniversityAPIService {
     }
   }
 
+  // ——— Stories ———
+  getStoryMediaUrl(mediaUrl) {
+    if (!mediaUrl) return null;
+    const base = this.client.defaults.baseURL || API_BASE_URL;
+    return `${base}/stories/media?path=${encodeURIComponent(mediaUrl)}`;
+  }
+
+  async getStoriesFeed(params = {}) {
+    try {
+      const response = await this.client.get('/stories/feed', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Get stories feed error:', error);
+      return { stories: [] };
+    }
+  }
+
+  async getStory(storyId) {
+    try {
+      const response = await this.client.get(`/stories/${storyId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get story error:', error);
+      throw error;
+    }
+  }
+
+  async recordStoryView(storyId, slideReached = null) {
+    try {
+      await this.client.post(`/stories/${storyId}/view`, null, {
+        params: slideReached != null ? { slide_reached: slideReached } : {},
+      });
+    } catch (error) {
+      console.error('Record story view error:', error);
+    }
+  }
+
+  async getMyStories() {
+    try {
+      const response = await this.client.get('/stories/my');
+      return response.data;
+    } catch (error) {
+      console.error('Get my stories error:', error);
+      return { stories: [] };
+    }
+  }
+
+  async deleteStory(storyId) {
+    try {
+      await this.client.delete(`/stories/${storyId}`);
+    } catch (error) {
+      console.error('Delete story error:', error);
+      throw error;
+    }
+  }
+
+  async uploadStoryMedia(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await this.client.post('/stories/upload-media', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
+    });
+    return response.data;
+  }
+
+  async createStory(slides, universityId = 1) {
+    const response = await this.client.post('/stories', {
+      slides: slides.map((s) => ({
+        type: s.type,
+        media_url: s.media_url || null,
+        text: s.text || null,
+        duration_sec: s.duration_sec ?? null,
+      })),
+      university_id: universityId,
+    });
+    return response.data;
+  }
+
   // Получение статистики (для админов)
   async getStatistics() {
     try {

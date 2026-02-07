@@ -26,6 +26,8 @@ max-bot-api-client-ts-main/
 # Local copy of MAX UI (reference only; frontend uses @maxhub/max-ui from npm)
 max-ui-main/
 
+react-insta-stories-master/
+
 # IDE
 .vscode/
 .idea/

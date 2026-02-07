@@ -74,6 +74,7 @@ def init_databases():
     init_config_db()
     init_events_db()
     init_applications_db()
+    init_stories_db()
 
 
 def init_users_db():
@@ -238,6 +239,57 @@ def init_events_db():
         )
     """)
     
+    conn.commit()
+    conn.close()
+
+
+def init_stories_db():
+    """Инициализация таблиц для сервиса историй (stories)."""
+    conn = sqlite3.connect(UNIVERSITIES_DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS stories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            author_id INTEGER NOT NULL,
+            university_id INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'published',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP NOT NULL,
+            view_count INTEGER DEFAULT 0,
+            slide_count INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_stories_expires_at ON stories(expires_at)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_stories_author_created ON stories(author_id, created_at)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_stories_university_status_created ON stories(university_id, status, created_at)")
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS story_slides (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            story_id INTEGER NOT NULL,
+            position INTEGER NOT NULL,
+            type TEXT NOT NULL,
+            media_url TEXT,
+            text TEXT,
+            duration_sec REAL,
+            FOREIGN KEY (story_id) REFERENCES stories(id) ON DELETE CASCADE
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS story_views (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            story_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            slide_reached INTEGER,
+            UNIQUE(story_id, user_id),
+            FOREIGN KEY (story_id) REFERENCES stories(id)
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_story_views_story_user ON story_views(story_id, user_id)")
+
     conn.commit()
     conn.close()
 
@@ -533,6 +585,24 @@ def get_user(max_user_id: int) -> Optional[Dict]:
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE max_user_id = ?", (max_user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def get_user_by_id(internal_id: int) -> Optional[Dict]:
+    """Получить пользователя по внутреннему ID (id в таблице users)."""
+    if USE_PG:
+        conn = psycopg2.connect(DATABASE_URL, cursor_factory=pg_extras.RealDictCursor)
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM users WHERE id = %s", (internal_id,))
+        row = cur.fetchone()
+        conn.close()
+        return dict(row) if row else None
+    conn = sqlite3.connect(USERS_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE id = ?", (internal_id,))
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
@@ -1343,3 +1413,134 @@ def review_application(application_id: int, reviewed_by_user_id: int,
     
     conn.commit()
     conn.close()
+
+
+# ============ STORIES ============
+
+def create_story(author_id: int, university_id: int, slides: List[Dict], status: str = "published") -> int:
+    """Создать историю и слайды. Возвращает story id."""
+    from datetime import timedelta
+    expires_at = (datetime.utcnow() + timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
+    conn = sqlite3.connect(UNIVERSITIES_DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO stories (author_id, university_id, status, expires_at, slide_count)
+        VALUES (?, ?, ?, ?, ?)
+    """, (author_id, university_id, status, expires_at, len(slides)))
+    story_id = cursor.lastrowid
+    for i, s in enumerate(slides):
+        cursor.execute("""
+            INSERT INTO story_slides (story_id, position, type, media_url, text, duration_sec)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (story_id, i, s.get("type", "text"), s.get("media_url"), s.get("text"), s.get("duration_sec")))
+    conn.commit()
+    conn.close()
+    return story_id
+
+
+def get_story(story_id: int, include_expired: bool = False) -> Optional[Dict]:
+    """Получить историю по id со слайдами. Если include_expired=False, истёкшие не возвращаются."""
+    conn = sqlite3.connect(UNIVERSITIES_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    if include_expired:
+        cursor.execute("SELECT * FROM stories WHERE id = ?", (story_id,))
+    else:
+        cursor.execute("SELECT * FROM stories WHERE id = ? AND expires_at > datetime('now') AND status = 'published'", (story_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return None
+    story = dict(row)
+    cursor.execute("SELECT * FROM story_slides WHERE story_id = ? ORDER BY position", (story_id,))
+    story["slides"] = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return story
+
+
+def get_stories_feed(university_id: Optional[int], limit: int = 50, offset: int = 0) -> List[Dict]:
+    """Лента историй: сначала своего вуза, потом по дате. Возвращает список без слайдов (только превью)."""
+    conn = sqlite3.connect(UNIVERSITIES_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT s.* FROM stories s
+        WHERE s.expires_at > datetime('now') AND s.status = 'published'
+        ORDER BY CASE WHEN s.university_id = ? THEN 0 ELSE 1 END, s.created_at DESC
+        LIMIT ? OFFSET ?
+    """, (university_id or 0, limit, offset))
+    rows = cursor.fetchall()
+    stories = []
+    for row in rows:
+        s = dict(row)
+        cursor.execute("SELECT media_url, type FROM story_slides WHERE story_id = ? ORDER BY position LIMIT 1", (s["id"],))
+        first = cursor.fetchone()
+        s["cover_url"] = first["media_url"] if first and first["media_url"] else None
+        stories.append(s)
+    conn.close()
+    return stories
+
+
+def record_story_view(story_id: int, user_id: int, slide_reached: Optional[int] = None) -> bool:
+    """Записать просмотр. user_id — internal user id. Возвращает True если запись добавлена."""
+    conn = sqlite3.connect(UNIVERSITIES_DB_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("INSERT OR IGNORE INTO story_views (story_id, user_id, slide_reached) VALUES (?, ?, ?)",
+                       (story_id, user_id, slide_reached))
+        inserted = cursor.rowcount > 0
+        if inserted:
+            cursor.execute("UPDATE stories SET view_count = view_count + 1 WHERE id = ?", (story_id,))
+        conn.commit()
+        return inserted
+    except Exception:
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
+def get_my_stories(author_id: int) -> List[Dict]:
+    """Истории текущего пользователя (для профиля). author_id — internal user id."""
+    conn = sqlite3.connect(UNIVERSITIES_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM stories WHERE author_id = ? AND expires_at > datetime('now')
+        ORDER BY created_at DESC
+    """, (author_id,))
+    rows = cursor.fetchall()
+    stories = []
+    for row in rows:
+        s = dict(row)
+        cursor.execute("SELECT media_url FROM story_slides WHERE story_id = ? ORDER BY position LIMIT 1", (s["id"],))
+        first = cursor.fetchone()
+        s["cover_url"] = first["media_url"] if first and first["media_url"] else None
+        stories.append(s)
+    conn.close()
+    return stories
+
+
+def delete_story(story_id: int, author_id: int) -> bool:
+    """Удалить историю (только автор). Возвращает True если удалено."""
+    conn = sqlite3.connect(UNIVERSITIES_DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM stories WHERE id = ? AND author_id = ?", (story_id, author_id))
+    if not cursor.fetchone():
+        conn.close()
+        return False
+    cursor.execute("DELETE FROM story_views WHERE story_id = ?", (story_id,))
+    cursor.execute("DELETE FROM story_slides WHERE story_id = ?", (story_id,))
+    cursor.execute("DELETE FROM stories WHERE id = ?", (story_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+
+def get_story_media_relative_path(media_url: str) -> Optional[str]:
+    """Проверить, что media_url безопасный (в рамках stories). Возвращает относительный путь для файла."""
+    if not media_url or ".." in media_url or media_url.startswith("/") or "\\" in media_url:
+        return None
+    if not (media_url.startswith("stories/") or media_url.startswith("stories\\")):
+        return None
+    return media_url.replace("\\", "/")
