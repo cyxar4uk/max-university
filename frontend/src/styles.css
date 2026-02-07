@@ -1547,12 +1547,25 @@
   gap: 16px;
 }
 
+.schedule-next-class-meta--single-line {
+  flex-wrap: nowrap;
+  gap: 12px;
+}
+
 .schedule-next-class-meta-item {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: var(--max-font-size-sm);
   color: var(--max-text-muted);
+}
+
+.schedule-next-class-meta-icon-img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  opacity: 0.85;
+  flex-shrink: 0;
 }
 
 .schedule-next-class-meta-icon {

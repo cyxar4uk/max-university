@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiService from '../api-service.js';
 
+const baseUrl = typeof import.meta.env?.BASE_URL === 'string' ? import.meta.env.BASE_URL : '/';
+const icon = (name) => `${baseUrl}icons/${name}.svg`;
+
 const ScheduleWidget = ({ block, apiService: apiServiceProp, variant }) => {
   const navigate = useNavigate();
   const api = apiServiceProp || apiService;
@@ -110,19 +113,16 @@ const ScheduleWidget = ({ block, apiService: apiServiceProp, variant }) => {
         {nextClass.teacher && (
           <div className="schedule-next-class-teacher">{nextClass.teacher}</div>
         )}
-        <div className="schedule-next-class-meta">
+        <div className="schedule-next-class-meta schedule-next-class-meta--single-line">
           <span className="schedule-next-class-meta-item">
-            <span className="schedule-next-class-meta-icon" aria-hidden>🕐</span>
+            <img src={icon('icontime')} alt="" className="schedule-next-class-meta-icon-img" aria-hidden />
             {timeStr}
           </span>
           <span className="schedule-next-class-meta-item">
-            <span className="schedule-next-class-meta-icon" aria-hidden>📍</span>
+            <img src={icon('iconlocation')} alt="" className="schedule-next-class-meta-icon-img" aria-hidden />
             {roomStr}
           </span>
-          <span className="schedule-next-class-meta-item">
-            <span className="schedule-next-class-meta-icon" aria-hidden>📄</span>
-            {typeStr}
-          </span>
+          <span className="schedule-next-class-meta-item schedule-next-class-meta-type">{typeStr}</span>
         </div>
       </div>
     );
