@@ -36,7 +36,8 @@ async def startup_event():
         log.warning("Database: SQLite — установите psycopg2-binary в venv: pip install psycopg2-binary")
     else:
         log.info("Database: SQLite only (DATABASE_URL not set)")
-    # Проверка токена бота (без вывода значения): смотри в journalctl или проверь в консоли через curl /api/health
+    
+    # Проверка токена бота
     if MAX_BOT_TOKEN:
         log.info("MAX_BOT_TOKEN: loaded (from env or .env.bot)")
     else:
@@ -653,93 +654,9 @@ def _parse_webhook_body(body: dict):
     return user_id, text, user_data
 
 
-@app.post("/api/bot/webhook")
-async def bot_webhook(request: Request):
-    """
-    Вебхук для обновлений от MAX Bot. Принимает любой JSON, извлекает user_id и text,
-    обрабатывает команды и на неизвестный текст отвечает «Не знаю такой команды».
-    """
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-    if not body:
-        return {"status": "ok"}
-
-    try:
-        # ----- Входящее сообщение (текст) -----
-        user_id, text, user_data = _parse_webhook_body(body)
-        message = body.get("message") or body.get("msg") or body
-
-        if user_id and text is not None:
-            # Нормализуем: команда может приходить с или без слэша
-            cmd = (text.split()[0] if text else "").lower()
-            if not cmd.startswith("/"):
-                cmd = "/" + cmd
-
-            if cmd == "/start":
-                await handle_start_command(user_id, user_data)
-                return {"status": "ok"}
-            if cmd == "/help":
-                await handle_help_command(user_id)
-                return {"status": "ok"}
-            if cmd == "/schedule":
-                await bot_api.send_message(
-                    user_id=user_id,
-                    text="📅 Расписание",
-                    reply_markup=get_quick_actions_keyboard("schedule")
-                )
-                return {"status": "ok"}
-            if cmd == "/profile":
-                await bot_api.send_message(
-                    user_id=user_id,
-                    text="👤 Профиль",
-                    reply_markup=get_quick_actions_keyboard("profile")
-                )
-                return {"status": "ok"}
-
-            # Любой другой текст — отвечаем, что не знаем
-            await bot_api.send_message(
-                user_id=user_id,
-                text="Я не знаю такой команды.\n\nИспользуйте /start или /help."
-            )
-            return {"status": "ok"}
-
-        # ----- Callback (нажатие inline-кнопки): callback_query или message_callback -----
-        callback = body.get("callback_query") or body.get("message_callback")
-        if callback and isinstance(callback, dict):
-            callback_query_id = callback.get("id") or callback.get("query_id") or ""
-            from_info = callback.get("from") or callback.get("user") or {}
-            c_user_id = from_info.get("id") or from_info.get("user_id")
-            callback_data = str(callback.get("data") or callback.get("payload") or "")
-            msg = callback.get("message") or {}
-            message_id = msg.get("message_id") or msg.get("mid") or msg.get("id")
-            try:
-                c_user_id = int(c_user_id) if c_user_id is not None else None
-            except (TypeError, ValueError):
-                c_user_id = None
-            if c_user_id and callback_data:
-                if callback_data.startswith("role_"):
-                    role = callback_data.split("_", 1)[1]
-                    await handle_role_selection(c_user_id, callback_query_id, role, message_id)
-                elif callback_data.startswith("block_"):
-                    block = callback_data.split("_")[1]
-                    await handle_block_selection(c_user_id, callback_query_id, block, message_id)
-                elif callback_data == "back_to_menu":
-                    await handle_back_to_menu(c_user_id, callback_query_id, message_id)
-                elif callback_data.startswith("schedule_"):
-                    action = callback_data.split("_")[1]
-                    await bot_api.answer_callback_query(
-                        callback_query_id=callback_query_id,
-                        text=f"Действие: {action}"
-                    )
-
-        return {"status": "ok"}
-    except Exception as e:
-        print(f"Bot webhook error: {e}")
-        import traceback
-        traceback.print_exc()
-        return {"status": "ok"}
+# Вебхук бота перенесён в TS-бот: services/max-bot (@maxhub/max-bot-api).
+# Настройте в MAX URL вебхука на сервис, где запущен TS-бот.
+# Синхронизация пользователей: POST /api/bot/sync-user (вызывается из TS-бота).
 
 # ============ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ============
 
@@ -780,6 +697,59 @@ def get_user_id_from_headers(x_max_user_id: Optional[str] = Header(None)) -> int
 async def health_check():
     """Проверка работы сервиса; bot_token_loaded — читается ли MAX_BOT_TOKEN из .env.bot/env."""
     return {"status": "healthy", "bot_token_loaded": bool(MAX_BOT_TOKEN)}
+
+
+class BotSyncUser(BaseModel):
+    """Тело запроса от TS-бота для синхронизации пользователя."""
+    max_user_id: int
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    username: Optional[str] = None
+    role: Optional[str] = None
+    university_id: Optional[int] = 1
+
+
+BOT_SECRET = os.environ.get("BOT_SECRET", "").strip() or _get_max_bot_token()
+
+
+@app.post("/api/bot/sync-user")
+async def bot_sync_user(
+    body: BotSyncUser,
+    x_bot_secret: Optional[str] = Header(None),
+):
+    """
+    Синхронизация пользователя из TS-бота (@maxhub/max-bot-api).
+    Создаёт или обновляет пользователя в БД. Заголовок X-Bot-Secret опционален (можно BOT_TOKEN или BOT_SECRET).
+    """
+    if BOT_SECRET and x_bot_secret != BOT_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid X-Bot-Secret")
+    uid = body.max_user_id
+    university_id = body.university_id or 1
+    existing = database.get_user(uid)
+    if existing:
+        if body.first_name is not None or body.last_name is not None or body.username is not None:
+            database.update_user_profile(
+                uid,
+                first_name=body.first_name or existing.get("first_name") or "",
+                last_name=body.last_name if body.last_name is not None else existing.get("last_name"),
+                username=body.username if body.username is not None else existing.get("username"),
+            )
+        if body.role is not None:
+            database.update_user_role(uid, body.role, university_id)
+    else:
+        database.create_user({
+            "max_user_id": uid,
+            "first_name": body.first_name or "",
+            "last_name": body.last_name,
+            "username": body.username,
+            "photo_url": None,
+            "language_code": None,
+            "role": body.role,
+            "university_id": university_id,
+        })
+    user = database.get_user(uid)
+    return user or {}
+
 
 @app.post("/api/users/auth")
 async def authenticate_user(user: User, x_max_init_data: Optional[str] = Header(None)):

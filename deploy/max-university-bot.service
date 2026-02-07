@@ -1,0 +1,27 @@
+# systemd unit для MAX-бота (TypeScript, @maxhub/max-bot-api).
+# Установка на VPS:
+#   sudo cp deploy/max-university-bot.service /etc/systemd/system/
+#   sudo sed -i "s|/path/to/repo|$(pwd)|g" /etc/systemd/system/max-university-bot.service
+#   (создайте services/max-bot/.env с BOT_TOKEN, BACKEND_URL и при необходимости BOT_SECRET, MINI_APP_URL)
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable max-university-bot
+#   sudo systemctl start max-university-bot
+#
+# Бот получает обновления по webhook от MAX; синхронизация пользователей — через BACKEND_URL/api/bot/sync-user.
+
+[Unit]
+Description=Max University Bot (MAX TS)
+After=network.target
+
+[Service]
+Type=simple
+User=www
+Group=www
+WorkingDirectory=/path/to/repo/services/max-bot
+EnvironmentFile=-/path/to/repo/services/max-bot/.env
+ExecStart=/usr/bin/node dist/bot.js
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

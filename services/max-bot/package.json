@@ -1,0 +1,21 @@
+{
+  "name": "max-university-bot",
+  "version": "1.0.0",
+  "description": "MAX Digital University bot (@maxhub/max-bot-api)",
+  "main": "dist/bot.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/bot.js",
+    "dev": "ts-node src/bot.ts"
+  },
+  "dependencies": {
+    "@maxhub/max-bot-api": "^1.0.0",
+    "dotenv": "^16.0.0",
+    "node-fetch": "^2.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}

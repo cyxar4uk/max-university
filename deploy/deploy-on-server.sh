@@ -69,4 +69,14 @@ fi
 # Вариант C: PM2 (если бэкенд запущен через PM2 в aaPanel)
 # pm2 restart max-university-backend 2>/dev/null || true
 
+# 5. TS-бот MAX (services/max-bot)
+if [ -d "$REPO_ROOT/services/max-bot" ]; then
+  echo "Building and restarting max-bot..."
+  cd "$REPO_ROOT/services/max-bot"
+  npm install --omit=dev 2>/dev/null || true
+  npm run build 2>/dev/null || true
+  (systemctl restart max-university-bot 2>/dev/null) || true
+  echo "max-bot done."
+fi
+
 echo "=== Deploy finished ==="

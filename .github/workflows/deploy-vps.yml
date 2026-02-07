@@ -32,6 +32,10 @@ jobs:
           VITE_BASE_URL: /
           VITE_API_URL: https://max-university.anyway-community.ru/api
 
+      - name: Build max-bot (TS)
+        working-directory: ./services/max-bot
+        run: npm ci 2>/dev/null || npm install && npm run build
+
       - name: Copy frontend to server
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -40,6 +44,15 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "frontend/dist"
           target: "/tmp"
+
+      - name: Copy max-bot dist to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "services/max-bot/dist"
+          target: "/tmp/max-bot-dist"
 
       - name: Deploy and restart on server
         uses: appleboy/ssh-action@v1.0.3
@@ -81,5 +94,14 @@ jobs:
             if [ -d "$REPO_PATH/services/cold-news" ]; then
               (cd "$REPO_PATH/services/cold-news" && npm ci --omit=dev 2>/dev/null) || true
               (systemctl restart cold-news-feed-api 2>/dev/null) || true
+            fi
+            if [ -d "$REPO_PATH/services/max-bot" ]; then
+              if [ -d /tmp/max-bot-dist ]; then
+                mkdir -p "$REPO_PATH/services/max-bot/dist"
+                cp -r /tmp/max-bot-dist/. "$REPO_PATH/services/max-bot/dist/"
+                rm -rf /tmp/max-bot-dist
+              fi
+              (cd "$REPO_PATH/services/max-bot" && npm install --omit=dev 2>/dev/null) || true
+              (systemctl restart max-university-bot 2>/dev/null) || true
             fi
             echo "Deploy done."
