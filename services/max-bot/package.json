@@ -9,7 +9,7 @@
     "dev": "ts-node src/bot.ts"
   },
   "dependencies": {
-    "@maxhub/max-bot-api": "^1.0.0",
+    "@maxhub/max-bot-api": "github:max-messenger/max-bot-api-client-ts",
     "dotenv": "^16.0.0",
     "node-fetch": "^2.6.7"
   },

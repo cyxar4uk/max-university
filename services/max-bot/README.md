@@ -1,14 +1,13 @@
 # MAX Digital University — бот (TypeScript)
 
-Бот написан на **TypeScript** с официальной библиотекой **@maxhub/max-bot-api**.
+Бот написан на **TypeScript** с официальной библиотекой [max-bot-api-client-ts](https://github.com/max-messenger/max-bot-api-client-ts) (подключается из GitHub, в npm пакет не опубликован).
 
 ## Установка
 
 ```bash
 cd services/max-bot
-yarn install
-# или
 npm install
+# или yarn install
 ```
 
 ## Настройка
