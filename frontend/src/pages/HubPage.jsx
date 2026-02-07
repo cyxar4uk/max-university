@@ -9,7 +9,6 @@ import HubEventsWidget from '../Widgets/HubEventsWidget.jsx';
 import FeedSourcesModal, { getStoredSources, setStoredSources } from '../components/FeedSourcesModal.jsx';
 import StoriesViewer from '../components/StoriesViewer.jsx';
 import AppHeader from '../components/AppHeader.jsx';
-import { MOCK_STORIES } from '../mockStories.js';
 
 const baseUrl = typeof import.meta.env?.BASE_URL === 'string' ? import.meta.env.BASE_URL : '/';
 const icon = (name) => `${baseUrl}icons/${name}.svg`;
@@ -27,7 +26,9 @@ const HubPage = () => {
   const [sources, setSources] = useState([]);
   const [selectedSources, setSelectedSources] = useState(getStoredSources);
   const [sourcesModalOpen, setSourcesModalOpen] = useState(false);
+  const [storiesFeed, setStoriesFeed] = useState([]);
   const [storiesViewerIndex, setStoriesViewerIndex] = useState(null);
+  const [storyDetailForViewer, setStoryDetailForViewer] = useState(null);
   const [feedLoading, setFeedLoading] = useState(true);
   const [feedOffset, setFeedOffset] = useState(0);
   const feedLimit = 20;
@@ -76,6 +77,36 @@ const HubPage = () => {
     loadFeed(false);
   }, [selectedSources]);
 
+  const universityIdForStories = user.universityId || parseInt(localStorage.getItem('universityId') || '1', 10);
+  useEffect(() => {
+    let cancelled = false;
+    apiService.getStoriesFeed({ university_id: universityIdForStories, limit: 20 }).then((data) => {
+      if (!cancelled) setStoriesFeed(data.stories || []);
+    }).catch(() => { if (!cancelled) setStoriesFeed([]); });
+    return () => { cancelled = true; };
+  }, [universityIdForStories]);
+
+  useEffect(() => {
+    if (storiesViewerIndex == null || !storiesFeed[storiesViewerIndex]) {
+      setStoryDetailForViewer(null);
+      return;
+    }
+    const id = storiesFeed[storiesViewerIndex].id;
+    let cancelled = false;
+    apiService.getStory(id).then((story) => {
+      if (!cancelled && story) {
+        const slides = (story.slides || []).map((s) => {
+          if (s.type === 'image' || s.type === 'video') {
+            return { type: s.type, url: apiService.getStoryMediaUrl(s.media_url), duration_sec: s.duration_sec };
+          }
+          return { type: 'text', text: s.text || '' };
+        });
+        setStoryDetailForViewer({ id: story.id, authorName: story.author_name, avatarUrl: story.avatar_url || null, slides });
+      }
+    }).catch(() => { if (!cancelled) setStoryDetailForViewer(null); });
+    return () => { cancelled = true; };
+  }, [storiesViewerIndex, storiesFeed]);
+
   const handleSaveSources = (next) => {
     setStoredSources(next);
     setSelectedSources(next);
@@ -107,20 +138,20 @@ const HubPage = () => {
         onProfileClick={handleProfileClick}
         centerContent={
           <div className="hub-header-stories">
-            <div className="hub-header-story hub-header-story--add" aria-hidden="true">+</div>
-            {MOCK_STORIES.slice(0, 3).map((story, index) => (
+            <button type="button" className="hub-header-story hub-header-story--add" onClick={() => navigate('/create-story')} aria-label="Добавить историю">+</button>
+            {storiesFeed.slice(0, 3).map((story, index) => (
               <button
                 key={story.id}
                 type="button"
                 className="hub-header-story hub-header-story--gradient hub-header-story--btn"
                 onClick={() => setStoriesViewerIndex(index)}
-                title={story.authorName}
+                title={story.author_name}
               >
                 <Avatar.Container size={40} form="circle">
-                  {story.avatarUrl ? (
-                    <Avatar.Image src={story.avatarUrl} alt="" fallback={(story.authorName || '?').charAt(0)} />
+                  {story.avatar_url ? (
+                    <Avatar.Image src={story.avatar_url} alt="" fallback={(story.author_name || '?').charAt(0)} />
                   ) : (
-                    <Avatar.Text gradient="blue">{(story.authorName || '?').charAt(0)}</Avatar.Text>
+                    <Avatar.Text gradient="blue">{(story.author_name || '?').charAt(0)}</Avatar.Text>
                   )}
                 </Avatar.Container>
               </button>
@@ -221,11 +252,13 @@ const HubPage = () => {
         </section>
       </main>
 
-      {storiesViewerIndex !== null && (
+      {storiesViewerIndex !== null && storyDetailForViewer && (
         <StoriesViewer
-          stories={MOCK_STORIES}
-          startStoryIndex={storiesViewerIndex}
-          onClose={() => setStoriesViewerIndex(null)}
+          stories={[storyDetailForViewer]}
+          startStoryIndex={0}
+          onClose={() => { setStoriesViewerIndex(null); setStoryDetailForViewer(null); }}
+          storyId={storiesFeed[storiesViewerIndex]?.id}
+          onViewRecorded={apiService.recordStoryView}
         />
       )}
 

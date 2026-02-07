@@ -41,6 +41,21 @@ async def startup_event():
     else:
         log.info("Database: SQLite only (DATABASE_URL not set)")
     
+    # Очистка истёкших историй и их файлов
+    try:
+        expired_ids = database.delete_expired_stories()
+        for sid in expired_ids:
+            story_dir = STORIES_MEDIA_DIR / str(sid)
+            if story_dir.exists():
+                try:
+                    shutil.rmtree(story_dir)
+                except Exception:
+                    pass
+        if expired_ids:
+            log.info("Stories cleanup: removed %s expired", len(expired_ids))
+    except Exception as e:
+        log.warning("Stories cleanup failed: %s", e)
+    
     # Проверка токена бота
     if MAX_BOT_TOKEN:
         log.info("MAX_BOT_TOKEN: loaded (from env or .env.bot)")

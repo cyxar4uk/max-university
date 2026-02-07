@@ -1544,3 +1544,18 @@ def get_story_media_relative_path(media_url: str) -> Optional[str]:
     if not (media_url.startswith("stories/") or media_url.startswith("stories\\")):
         return None
     return media_url.replace("\\", "/")
+
+
+def delete_expired_stories() -> List[int]:
+    """Удалить истёкшие истории (expires_at < now) и их слайды/просмотры. Возвращает список удалённых story_id."""
+    conn = sqlite3.connect(UNIVERSITIES_DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM stories WHERE expires_at < datetime('now')")
+    ids = [row[0] for row in cursor.fetchall()]
+    for story_id in ids:
+        cursor.execute("DELETE FROM story_views WHERE story_id = ?", (story_id,))
+        cursor.execute("DELETE FROM story_slides WHERE story_id = ?", (story_id,))
+        cursor.execute("DELETE FROM stories WHERE id = ?", (story_id,))
+    conn.commit()
+    conn.close()
+    return ids

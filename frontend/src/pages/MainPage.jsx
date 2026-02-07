@@ -213,7 +213,7 @@ const MainPage = () => {
             <button
               type="button"
               className="main-page-story main-page-story-add"
-              onClick={() => navigate('/profile?tab=stories')}
+              onClick={() => navigate('/create-story')}
               aria-label="Добавить историю"
             >
               +

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import {
@@ -16,6 +16,8 @@ import {
 import { useMAXBridge } from '../useMAXBridge.js';
 import { getDisplayUser } from '../utils/displayUser.js';
 import UserSwitcher from '../UserSwitcher.jsx';
+import apiService from '../api-service.js';
+import StoriesViewer from '../components/StoriesViewer.jsx';
 
 const roleNames = {
   student: 'Студент',
@@ -30,9 +32,45 @@ const ProfilePage = () => {
   const user = useSelector((state) => state.user);
   const { userInfo } = useMAXBridge();
   const { displayName, avatarUrl } = getDisplayUser(userInfo, user);
+  const [myStories, setMyStories] = useState([]);
+  const [viewerStoryId, setViewerStoryId] = useState(null);
+  const [storyDetailForViewer, setStoryDetailForViewer] = useState(null);
 
   const currentRoleLabel = user.role ? (roleNames[user.role] || user.role) : null;
   const initial = (displayName || 'П').charAt(0).toUpperCase();
+
+  useEffect(() => {
+    let cancelled = false;
+    apiService.getMyStories().then((data) => {
+      if (!cancelled) setMyStories(data.stories || []);
+    }).catch(() => { if (!cancelled) setMyStories([]); });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (viewerStoryId == null) {
+      setStoryDetailForViewer(null);
+      return;
+    }
+    let cancelled = false;
+    apiService.getStory(viewerStoryId).then((story) => {
+      if (!cancelled && story) {
+        const slides = (story.slides || []).map((s) => {
+          if (s.type === 'image' || s.type === 'video') {
+            return { type: s.type, url: apiService.getStoryMediaUrl(s.media_url), duration_sec: s.duration_sec };
+          }
+          return { type: 'text', text: s.text || '' };
+        });
+        setStoryDetailForViewer({
+          id: story.id,
+          authorName: story.author_name,
+          avatarUrl: story.avatar_url || null,
+          slides,
+        });
+      }
+    }).catch(() => { if (!cancelled) setStoryDetailForViewer(null); });
+    return () => { cancelled = true; };
+  }, [viewerStoryId]);
 
   return (
     <Panel mode="secondary" className="profile-page-panel">
@@ -70,6 +108,44 @@ const ProfilePage = () => {
       </Container>
 
       <Flex direction="column" gap={16} className="profile-page-sections">
+        {/* Мои истории */}
+        <CellList mode="island" header={<CellHeader>Мои истории</CellHeader>}>
+          <div className="profile-my-stories">
+            <div className="profile-my-stories-track">
+              <button
+                type="button"
+                className="profile-my-story-card profile-my-story-card-add"
+                onClick={() => navigate('/create-story')}
+                aria-label="Добавить историю"
+              >
+                +
+              </button>
+              {myStories.map((story) => (
+                <button
+                  key={story.id}
+                  type="button"
+                  className="profile-my-story-card"
+                  onClick={() => setViewerStoryId(story.id)}
+                >
+                  {story.cover_url ? (
+                    <img src={apiService.getStoryMediaUrl(story.cover_url)} alt="" />
+                  ) : (
+                    <div className="profile-my-story-card-add" style={{ height: 80 }} />
+                  )}
+                  <Typography.Label variant="small" style={{ display: 'block', padding: 4 }}>
+                    {story.view_count ?? 0} просмотров
+                  </Typography.Label>
+                </button>
+              ))}
+            </div>
+            {myStories.length === 0 && (
+              <Typography.Body variant="small" className="profile-section-note">
+                Создайте первую историю — она будет отображаться 24 часа.
+              </Typography.Body>
+            )}
+          </div>
+        </CellList>
+
         {/* Общая информация */}
         <CellList
           mode="island"
@@ -122,6 +198,16 @@ const ProfilePage = () => {
           </CellAction>
         </CellList>
       </Flex>
+
+      {viewerStoryId != null && storyDetailForViewer && (
+        <StoriesViewer
+          stories={[storyDetailForViewer]}
+          startStoryIndex={0}
+          onClose={() => { setViewerStoryId(null); setStoryDetailForViewer(null); }}
+          storyId={viewerStoryId}
+          onViewRecorded={apiService.recordStoryView}
+        />
+      )}
     </Panel>
   );
 };

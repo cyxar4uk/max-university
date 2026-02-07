@@ -36,6 +36,7 @@ import AdmissionDirectionsPage from './pages/AdmissionDirectionsPage.jsx';
 import AdmissionApplyPage from './pages/AdmissionApplyPage.jsx';
 import AdmissionMyApplicationsPage from './pages/AdmissionMyApplicationsPage.jsx';
 import AdminApplicationsPage from './pages/AdminApplicationsPage.jsx';
+import CreateStoryPage from './pages/CreateStoryPage.jsx';
 
 function App() {
   const [mockModeError, setMockModeError] = useState(null);
@@ -131,6 +132,7 @@ function App() {
             <Route path="hub" element={<HubPage />} />
             <Route path="study" element={<StudyGate />} />
             <Route path="profile" element={<ProfilePage />} />
+            <Route path="create-story" element={<CreateStoryPage />} />
             <Route path="schedule" element={<SchedulePage />} />
             <Route path="courses" element={<CoursesPage />} />
             <Route path="courses/:id" element={<CoursePage />} />
