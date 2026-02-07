@@ -94,23 +94,22 @@ class UniversityAPIService {
     try {
       const userData = window.WebApp?.initDataUnsafe;
       if (!userData || !userData.user) {
-        // Используем мок-данные для демонстрации
-        console.warn('No user data from MAX Bridge, using mock authentication');
+        console.warn('No user data from MAX Bridge, using guest fallback');
         return {
           user: {
-            id: 12345,
-            max_user_id: 12345,
-            first_name: 'Демо',
-            last_name: 'Пользователь',
-            username: 'demo_user',
+            id: 0,
+            max_user_id: 0,
+            first_name: '',
+            last_name: '',
+            username: null,
             photo_url: null,
             language_code: 'ru',
-            role: null,
+            role: roleFromStartParam ?? localStorage.getItem('userRole') ?? null,
             university_id: 1,
             created_at: new Date().toISOString()
           },
           new_user: true,
-          message: "User created successfully (mock)"
+          message: "Guest (no MAX Bridge user)"
         };
       }
 
@@ -130,22 +129,40 @@ class UniversityAPIService {
       return response.data;
     } catch (error) {
       console.error('Authentication error:', error);
-      // Возвращаем мок-данные при ошибке для демонстрации
+      // При ошибке бэкенда — если есть данные из MAX Bridge, показываем их (имя не теряется)
+      const maxUser = window.WebApp?.initDataUnsafe?.user;
+      if (maxUser) {
+        return {
+          user: {
+            id: maxUser.id,
+            max_user_id: maxUser.id,
+            first_name: maxUser.first_name ?? '',
+            last_name: maxUser.last_name ?? '',
+            username: maxUser.username ?? null,
+            photo_url: maxUser.photo_url ?? null,
+            language_code: maxUser.language_code ?? 'ru',
+            role: roleFromStartParam ?? localStorage.getItem('userRole') ?? null,
+            university_id: 1,
+            created_at: new Date().toISOString()
+          },
+          new_user: true,
+          message: "User from MAX Bridge (backend unavailable)"
+        };
+      }
       return {
         user: {
-          id: 12345,
-          max_user_id: 12345,
-          first_name: 'Демо',
-          last_name: 'Пользователь',
-          username: 'demo_user',
+          id: 0,
+          max_user_id: 0,
+          first_name: '',
+          last_name: '',
+          username: null,
           photo_url: null,
-          language_code: 'ru',
           role: null,
           university_id: 1,
           created_at: new Date().toISOString()
         },
         new_user: true,
-        message: "User created successfully (mock fallback)"
+        message: "Guest (backend error)"
       };
     }
   }
