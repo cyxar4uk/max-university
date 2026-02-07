@@ -136,7 +136,7 @@ const MainPage = () => {
         {/* Инструменты: заголовок + Настроить, карточка «Следующая пара» + QR и Мероприятия */}
         <section className="main-page-tools">
           <Flex justify="space-between" align="center" className="main-page-tools-header">
-            <Typography.Headline variant="medium">Инструменты</Typography.Headline>
+            <Typography.Headline variant="medium" className="main-page-section-title">Инструменты</Typography.Headline>
             <Button
               mode="tertiary"
               appearance="themed"

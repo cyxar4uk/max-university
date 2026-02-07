@@ -68,6 +68,18 @@
   --max-transition: 0.2s ease;
 }
 
+/* Привязка к теме MAX UI: фоны и текст подстраиваются под светлую/тёмную тему */
+.MaxUI {
+  --max-bg: var(--background-surface-primary);
+  --max-bg-secondary: var(--background-surface-ground);
+  --max-bg-tertiary: var(--background-surface-tertiary);
+  --max-text: var(--text-primary);
+  --max-text-secondary: var(--text-secondary);
+  --max-text-muted: var(--text-tertiary);
+  --max-border: var(--stroke-separator-primary);
+  --max-border-light: var(--stroke-separator-secondary);
+}
+
 /* Welcome Page */
 .welcome-container {
   max-width: 500px;
