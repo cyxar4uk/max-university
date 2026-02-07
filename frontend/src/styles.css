@@ -1732,7 +1732,7 @@
 }
 .main-page-story-card-name {
   width: 100%;
-  padding: 6px 4px;
+  padding: 6px 4px 0;
   font-size: 11px;
   font-weight: 500;
   color: var(--max-text-secondary);
@@ -1740,6 +1740,13 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.main-page-story-card-time {
+  display: block;
+  font-size: 10px;
+  color: var(--max-text-tertiary);
+  text-align: center;
+  padding: 0 4px 6px;
 }
 
 /* Полноэкранный просмотр сторис */
@@ -1769,6 +1776,57 @@
   border-radius: var(--max-radius);
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+.stories-viewer-header-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.stories-viewer-time {
+  font-size: 11px;
+  opacity: 0.85;
+  font-weight: 400;
+}
+.stories-viewer-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 16px;
+  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 2;
+}
+.stories-viewer-reaction {
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  font-size: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+.stories-viewer-reaction:hover {
+  transform: scale(1.1);
+  background: rgba(255,255,255,0.3);
+}
+.stories-viewer-reaction--active {
+  color: #e53935;
+  background: rgba(229,57,53,0.3);
+}
+.stories-viewer-reaction-count {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
 }
 .stories-viewer-close {
   position: absolute;
@@ -1842,7 +1900,12 @@
 }
 .stories-viewer-author {
   font-weight: 600;
-  color: var(--max-text);
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+.stories-viewer-header .stories-viewer-time {
+  color: rgba(255,255,255,0.9);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 .stories-viewer-slide {
   flex: 1;
@@ -4037,6 +4100,220 @@ body {
   position: sticky;
   bottom: 0;
   background: var(--max-bg);
+}
+
+/* Full-screen story camera (create story step 1) */
+.story-camera-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+}
+.story-camera-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 100%);
+}
+.story-camera-btn {
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.story-camera-btn:hover {
+  background: rgba(255,255,255,0.35);
+}
+.story-camera-viewfinder {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+.story-camera-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.story-camera-screen .story-camera-video.user-facing {
+  transform: scaleX(-1);
+}
+.story-camera-error {
+  color: #fff;
+  padding: 16px;
+  text-align: center;
+}
+.story-camera-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 20px 16px 16px;
+  background: linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 100%);
+}
+.story-camera-gallery {
+  width: 48px;
+  height: 48px;
+  border: 2px solid rgba(255,255,255,0.5);
+  border-radius: 8px;
+  background: rgba(0,0,0,0.3);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.story-camera-gallery-icon {
+  font-size: 24px;
+}
+.story-camera-shutter {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  background: rgba(255,255,255,0.3);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s ease;
+}
+.story-camera-shutter:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+.story-camera-shutter--recording {
+  border-color: #e53935;
+  background: rgba(229,57,53,0.5);
+  animation: story-camera-pulse 1s ease-in-out infinite;
+}
+@keyframes story-camera-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+.story-camera-modes {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding-bottom: 12px;
+}
+.story-camera-mode {
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.7);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.story-camera-mode--active {
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Story editor (create story step 2) — caption, text on photo, publish */
+.story-editor-page {
+  padding-bottom: 100px;
+}
+.story-editor-preview-wrap {
+  position: relative;
+  width: 100%;
+  max-height: 50vh;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.story-editor-preview-wrap img,
+.story-editor-preview-wrap video {
+  max-width: 100%;
+  max-height: 50vh;
+  object-fit: contain;
+}
+.story-editor-caption-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--max-border);
+}
+.story-editor-caption-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--max-border);
+  border-radius: var(--max-radius);
+  font-size: 15px;
+  background: var(--max-bg);
+  color: var(--max-text);
+}
+.story-editor-caption-input::placeholder {
+  color: var(--max-text-secondary);
+}
+.story-editor-add-text-btn {
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border: 1px dashed var(--max-border);
+  border-radius: var(--max-radius);
+  background: var(--max-bg-secondary);
+  color: var(--max-text);
+  font-size: 14px;
+  cursor: pointer;
+}
+.story-editor-footer {
+  padding: 16px;
+  position: sticky;
+  bottom: 0;
+  background: var(--max-bg);
+}
+.story-editor-btn-next {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: var(--max-radius);
+  border: none;
+  background: var(--max-primary);
+  color: #fff;
+  cursor: pointer;
+}
+
+.story-overlay-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 11000;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.story-overlay-modal {
+  background: var(--max-bg);
+  border-radius: var(--max-radius);
+  padding: 20px;
+  max-width: 360px;
+  width: 100%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+.story-overlay-modal .story-editor-caption-input {
+  width: 100%;
+  margin-top: 8px;
 }
 
 /* Profile My stories */

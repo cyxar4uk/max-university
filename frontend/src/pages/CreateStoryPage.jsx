@@ -1,73 +1,145 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { Panel, Button, Typography, Flex } from '@maxhub/max-ui';
+import { Panel, Button, Typography } from '@maxhub/max-ui';
 import apiService from '../api-service.js';
+import StoryCameraScreen from '../components/StoryCameraScreen.jsx';
 
-/**
- * Создание истории: добавление слайдов (фото, видео, текст), загрузка медиа, публикация.
- */
 const CreateStoryPage = () => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.user);
-  const [slides, setSlides] = useState([]);
+  const [step, setStep] = useState('camera'); // 'camera' | 'editor'
+  const [slides, setSlides] = useState([]); // [{ type, file, preview, text }] from camera
+  const [caption, setCaption] = useState('');
+  const [overlayText, setOverlayText] = useState('');
+  const [showOverlayModal, setShowOverlayModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState(null);
-  const fileInputRef = useRef(null);
-  const videoInputRef = useRef(null);
+  const canvasRef = useRef(null);
+  const imgRef = useRef(null);
 
   const universityId = user.universityId || parseInt(localStorage.getItem('universityId') || '1', 10);
 
-  const addSlide = (type, payload = {}) => {
-    setSlides((prev) => [...prev, { type, ...payload }]);
+  const handleCapture = (files) => {
+    if (!files?.length) return;
+    const newSlides = files.map((f) => ({
+      type: f.type.startsWith('video/') ? 'video' : 'image',
+      file: f,
+      preview: URL.createObjectURL(f),
+      text: '',
+    }));
+    setSlides(newSlides);
+    setCaption('');
+    setOverlayText('');
+    setStep('editor');
+  };
+
+  const backToCamera = () => {
+    slides.forEach((s) => s.preview && URL.revokeObjectURL(s.preview));
+    setSlides([]);
+    setStep('camera');
     setError(null);
   };
 
-  const handleFileSelect = async (e, type) => {
-    const file = e.target?.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    setError(null);
-    try {
-      const data = await apiService.uploadStoryMedia(file);
-      if (data.media_url) {
-        addSlide(type, { media_url: data.media_url, preview: URL.createObjectURL(file) });
-      }
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Ошибка загрузки');
-    } finally {
-      setUploading(false);
-      e.target.value = '';
+  const addTextOnPhoto = () => {
+    setShowOverlayModal(true);
+  };
+
+  const applyOverlayText = () => {
+    if (!overlayText.trim() || slides.length === 0 || slides[0].type !== 'image') {
+      setShowOverlayModal(false);
+      setOverlayText('');
+      return;
     }
+    const img = imgRef.current;
+    const canvas = canvasRef.current;
+    if (!img || !canvas) {
+      setShowOverlayModal(false);
+      setOverlayText('');
+      return;
+    }
+    const ctx = canvas.getContext('2d');
+    const w = img.naturalWidth || img.width;
+    const h = img.naturalHeight || img.height;
+    if (!w || !h) {
+      setShowOverlayModal(false);
+      setOverlayText('');
+      return;
+    }
+    canvas.width = w;
+    canvas.height = h;
+    ctx.drawImage(img, 0, 0);
+    ctx.font = `bold ${Math.max(24, Math.floor(w / 15))}px sans-serif`;
+    ctx.fillStyle = '#fff';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const x = w / 2;
+    const y = h / 2;
+    ctx.strokeText(overlayText.trim(), x, y);
+    ctx.fillText(overlayText.trim(), x, y);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        const file = new File([blob], `story-overlay-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        const prev = slides[0].preview;
+        if (prev) URL.revokeObjectURL(prev);
+        setSlides([
+          {
+            ...slides[0],
+            file,
+            preview: URL.createObjectURL(blob),
+          },
+        ]);
+        setShowOverlayModal(false);
+        setOverlayText('');
+      },
+      'image/jpeg',
+      0.92
+    );
   };
 
-  const handleAddPhoto = () => fileInputRef.current?.click();
-  const handleAddVideo = () => videoInputRef.current?.click();
-
-  const removeSlide = (index) => {
-    setSlides((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const updateTextSlide = (index, text) => {
-    setSlides((prev) => prev.map((s, i) => (i === index ? { ...s, text } : s)));
-  };
+  const getVideoDuration = (file) =>
+    new Promise((resolve) => {
+      const v = document.createElement('video');
+      v.preload = 'metadata';
+      v.onloadedmetadata = () => {
+        resolve(v.duration);
+        v.src = '';
+      };
+      v.src = URL.createObjectURL(file);
+    });
 
   const handlePublish = async () => {
     if (!slides.length) {
-      setError('Добавьте хотя бы один слайд');
+      setError('Добавьте медиа');
       return;
     }
     setPublishing(true);
     setError(null);
     try {
-      const payload = slides.map((s) => ({
-        type: s.type,
-        media_url: s.media_url || null,
-        text: s.text || null,
-        duration_sec: s.duration_sec ?? null,
-      }));
+      const payload = [];
+      for (const s of slides) {
+        setUploading(true);
+        const uploadRes = await apiService.uploadStoryMedia(s.file);
+        setUploading(false);
+        let duration_sec = null;
+        if (s.type === 'video') {
+          try {
+            duration_sec = await getVideoDuration(s.file);
+          } catch (_) {}
+        }
+        payload.push({
+          type: s.type,
+          media_url: uploadRes.media_url,
+          text: s === slides[0] ? caption || null : s.text || null,
+          duration_sec,
+        });
+      }
       await apiService.createStory(payload, universityId);
+      slides.forEach((s) => s.preview && URL.revokeObjectURL(s.preview));
       navigate('/profile?tab=stories');
     } catch (err) {
       setError(err.response?.data?.detail || 'Ошибка публикации');
@@ -76,85 +148,111 @@ const CreateStoryPage = () => {
     }
   };
 
+  useEffect(() => {
+    return () => {
+      slides.forEach((s) => s.preview && URL.revokeObjectURL(s.preview));
+    };
+  }, []);
+
+  if (step === 'camera') {
+    return (
+      <StoryCameraScreen
+        onClose={() => navigate(-1)}
+        onCapture={handleCapture}
+      />
+    );
+  }
+
+  const firstSlide = slides[0];
+  const isImage = firstSlide?.type === 'image';
+
   return (
-    <Panel mode="secondary" className="create-story-page">
+    <Panel mode="secondary" className="story-editor-page create-story-page">
       <header className="create-story-header">
-        <Button mode="tertiary" appearance="neutral" size="small" onClick={() => navigate(-1)}>
+        <Button mode="tertiary" appearance="neutral" size="small" onClick={backToCamera}>
           Назад
         </Button>
         <Typography.Headline variant="medium">Новая история</Typography.Headline>
         <div />
       </header>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        style={{ display: 'none' }}
-        onChange={(e) => handleFileSelect(e, 'image')}
-      />
-      <input
-        ref={videoInputRef}
-        type="file"
-        accept="video/mp4,video/*"
-        capture="environment"
-        style={{ display: 'none' }}
-        onChange={(e) => handleFileSelect(e, 'video')}
-      />
+      <div className="story-editor-preview-wrap">
+        {firstSlide?.type === 'image' && (
+          <>
+            <img
+              ref={imgRef}
+              src={firstSlide.preview}
+              alt=""
+              style={{ maxWidth: '100%', maxHeight: '50vh', objectFit: 'contain' }}
+              crossOrigin="anonymous"
+            />
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
+          </>
+        )}
+        {firstSlide?.type === 'video' && (
+          <video
+            src={firstSlide.preview}
+            controls
+            muted
+            style={{ maxWidth: '100%', maxHeight: '50vh', objectFit: 'contain' }}
+          />
+        )}
+      </div>
 
-      <div className="create-story-actions">
-        <Button mode="secondary" appearance="neutral" onClick={handleAddPhoto} disabled={uploading}>
-          Фото
-        </Button>
-        <Button mode="secondary" appearance="neutral" onClick={handleAddVideo} disabled={uploading}>
-          Видео
-        </Button>
-        <Button mode="secondary" appearance="neutral" onClick={() => addSlide('text', { text: '' })}>
-          Текст
-        </Button>
+      <div className="story-editor-caption-row">
+        <input
+          type="text"
+          className="story-editor-caption-input"
+          placeholder="Добавить подпись..."
+          value={caption}
+          onChange={(e) => setCaption(e.target.value)}
+        />
+        {isImage && (
+          <button type="button" className="story-editor-add-text-btn" onClick={addTextOnPhoto}>
+            Текст на фото
+          </button>
+        )}
       </div>
 
       {error && <p className="create-story-error">{error}</p>}
 
-      <Flex direction="column" gap={12} className="create-story-slides">
-        {slides.map((slide, index) => (
-          <div key={index} className="create-story-slide">
-            {slide.type === 'image' && slide.preview && (
-              <img src={slide.preview} alt="" className="create-story-slide-preview" />
-            )}
-            {slide.type === 'video' && slide.preview && (
-              <video src={slide.preview} className="create-story-slide-preview" controls muted />
-            )}
-            {slide.type === 'text' && (
-              <input
-                type="text"
-                className="create-story-text-input"
-                placeholder="Текст слайда"
-                value={slide.text || ''}
-                onChange={(e) => updateTextSlide(index, e.target.value)}
-              />
-            )}
-            <span className="create-story-slide-type">{slide.type === 'image' ? 'Фото' : slide.type === 'video' ? 'Видео' : 'Текст'}</span>
-            <Button mode="tertiary" appearance="negative" size="small" onClick={() => removeSlide(index)}>
-              Удалить
-            </Button>
-          </div>
-        ))}
-      </Flex>
-
-      <div className="create-story-footer">
+      <div className="story-editor-footer create-story-footer">
         <Button
           mode="primary"
           appearance="themed"
           stretched
           onClick={handlePublish}
-          disabled={!slides.length || publishing}
-          loading={publishing}
+          disabled={!slides.length || publishing || uploading}
+          loading={publishing || uploading}
+          className="story-editor-btn-next"
         >
-          Опубликовать
+          {uploading ? 'Загрузка…' : publishing ? 'Публикация…' : 'Опубликовать'}
         </Button>
       </div>
+
+      {showOverlayModal && (
+        <div className="story-overlay-modal-backdrop" onClick={() => { setShowOverlayModal(false); setOverlayText(''); }}>
+          <div className="story-overlay-modal" onClick={(e) => e.stopPropagation()}>
+            <Typography.Headline variant="small">Текст на фото</Typography.Headline>
+            <input
+              type="text"
+              className="story-editor-caption-input"
+              placeholder="Введите текст..."
+              value={overlayText}
+              onChange={(e) => setOverlayText(e.target.value)}
+              autoFocus
+            />
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <Button mode="secondary" appearance="neutral" onClick={() => { setShowOverlayModal(false); setOverlayText(''); }}>
+                Отмена
+              </Button>
+              <Button mode="primary" appearance="themed" onClick={applyOverlayText}>
+                Применить
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Panel>
   );
 };

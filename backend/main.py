@@ -1918,6 +1918,10 @@ async def get_stories_feed_endpoint(
     user = _require_stories_user(user_id)
     uid = user.get("university_id") or university_id or 1
     items = database.get_stories_feed(uid, limit=limit, offset=offset)
+    story_ids = [s["id"] for s in items]
+    reaction_counts = database.get_story_reaction_counts(story_ids)
+    internal_id = user.get("id")
+    user_reacted_ids = set(database.get_user_reacted_story_ids(internal_id, story_ids)) if internal_id else set()
     result = []
     for s in items:
         author = database.get_user_by_id(s["author_id"])
@@ -1930,6 +1934,8 @@ async def get_stories_feed_endpoint(
             "cover_url": s.get("cover_url"),
             "slide_count": s["slide_count"],
             "view_count": s.get("view_count", 0),
+            "reaction_count": reaction_counts.get(s["id"], 0),
+            "user_reacted": s["id"] in user_reacted_ids,
             "created_at": s["created_at"],
             "expires_at": s["expires_at"],
         })
@@ -1977,7 +1983,7 @@ async def get_story_endpoint(
     user_id: Optional[int] = Header(None, alias="X-MAX-User-ID")
 ):
     """Детали одной истории (все слайды) для просмотра."""
-    _require_stories_user(user_id)
+    user = _require_stories_user(user_id)
     story = database.get_story(story_id, include_expired=False)
     if not story:
         raise HTTPException(status_code=404, detail="Story not found or expired")
@@ -1990,6 +1996,9 @@ async def get_story_endpoint(
             "text": sl.get("text"),
             "duration_sec": sl.get("duration_sec"),
         })
+    reaction_count = database.get_story_reaction_count(story_id)
+    user_reacted = story_id in database.get_user_reacted_story_ids(user["id"], [story_id])
+
     return {
         "id": story["id"],
         "author_id": story["author_id"],
@@ -1997,6 +2006,9 @@ async def get_story_endpoint(
         "avatar_url": author.get("photo_url") if author else None,
         "slides": slides_out,
         "view_count": story.get("view_count", 0),
+        "reaction_count": reaction_count,
+        "user_reacted": user_reacted,
+        "created_at": story.get("created_at"),
         "expires_at": story["expires_at"],
     }
 
@@ -2012,6 +2024,20 @@ async def record_story_view_endpoint(
     internal_id = user["id"]
     database.record_story_view(story_id, internal_id, slide_reached=slide_reached)
     return {"success": True}
+
+
+@app.post("/api/stories/{story_id}/reaction")
+async def toggle_story_reaction_endpoint(
+    story_id: int,
+    user_id: Optional[int] = Header(None, alias="X-MAX-User-ID")
+):
+    """Поставить или убрать реакцию на историю."""
+    user = _require_stories_user(user_id)
+    story = database.get_story(story_id, include_expired=False)
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found or expired")
+    added, new_count = database.toggle_story_reaction(story_id, user["id"])
+    return {"reacted": added, "reaction_count": new_count}
 
 
 @app.delete("/api/stories/{story_id}")

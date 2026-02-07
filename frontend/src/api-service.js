@@ -661,6 +661,11 @@ class UniversityAPIService {
     }
   }
 
+  async toggleStoryReaction(storyId) {
+    const response = await this.client.post(`/stories/${storyId}/reaction`);
+    return response.data; // { reacted: boolean, reaction_count: number }
+  }
+
   async getMyStories() {
     try {
       const response = await this.client.get('/stories/my');

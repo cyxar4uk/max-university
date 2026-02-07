@@ -290,6 +290,17 @@ def init_stories_db():
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_story_views_story_user ON story_views(story_id, user_id)")
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS story_reactions (
+            story_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (story_id, user_id),
+            FOREIGN KEY (story_id) REFERENCES stories(id) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_story_reactions_story ON story_reactions(story_id)")
+
     conn.commit()
     conn.close()
 
@@ -1529,12 +1540,74 @@ def delete_story(story_id: int, author_id: int) -> bool:
     if not cursor.fetchone():
         conn.close()
         return False
+    cursor.execute("DELETE FROM story_reactions WHERE story_id = ?", (story_id,))
     cursor.execute("DELETE FROM story_views WHERE story_id = ?", (story_id,))
     cursor.execute("DELETE FROM story_slides WHERE story_id = ?", (story_id,))
     cursor.execute("DELETE FROM stories WHERE id = ?", (story_id,))
     conn.commit()
     conn.close()
     return True
+
+
+def get_story_reaction_count(story_id: int) -> int:
+    """Количество реакций на историю."""
+    conn = sqlite3.connect(UNIVERSITIES_DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM story_reactions WHERE story_id = ?", (story_id,))
+    count = cursor.fetchone()[0]
+    conn.close()
+    return count
+
+
+def get_story_reaction_counts(story_ids: List[int]) -> Dict[int, int]:
+    """Словарь story_id -> количество реакций для списка историй."""
+    if not story_ids:
+        return {}
+    conn = sqlite3.connect(UNIVERSITIES_DB_PATH)
+    cursor = conn.cursor()
+    placeholders = ",".join("?" * len(story_ids))
+    cursor.execute(
+        f"SELECT story_id, COUNT(*) FROM story_reactions WHERE story_id IN ({placeholders}) GROUP BY story_id",
+        story_ids,
+    )
+    out = {row[0]: row[1] for row in cursor.fetchall()}
+    conn.close()
+    return out
+
+
+def get_user_reacted_story_ids(user_id: int, story_ids: List[int]) -> set:
+    """Множество story_id, на которые поставил реакцию пользователь."""
+    if not story_ids:
+        return set()
+    conn = sqlite3.connect(UNIVERSITIES_DB_PATH)
+    cursor = conn.cursor()
+    placeholders = ",".join("?" * len(story_ids))
+    cursor.execute(
+        f"SELECT story_id FROM story_reactions WHERE user_id = ? AND story_id IN ({placeholders})",
+        [user_id] + list(story_ids),
+    )
+    out = {row[0] for row in cursor.fetchall()}
+    conn.close()
+    return out
+
+
+def toggle_story_reaction(story_id: int, user_id: int) -> tuple:
+    """Переключить реакцию пользователя на историю. Возвращает (added: bool, new_count: int)."""
+    conn = sqlite3.connect(UNIVERSITIES_DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM story_reactions WHERE story_id = ? AND user_id = ?", (story_id, user_id))
+    exists = cursor.fetchone()
+    if exists:
+        cursor.execute("DELETE FROM story_reactions WHERE story_id = ? AND user_id = ?", (story_id, user_id))
+        added = False
+    else:
+        cursor.execute("INSERT INTO story_reactions (story_id, user_id) VALUES (?, ?)", (story_id, user_id))
+        added = True
+    cursor.execute("SELECT COUNT(*) FROM story_reactions WHERE story_id = ?", (story_id,))
+    new_count = cursor.fetchone()[0]
+    conn.commit()
+    conn.close()
+    return (added, new_count)
 
 
 def get_story_media_relative_path(media_url: str) -> Optional[str]:
@@ -1553,6 +1626,7 @@ def delete_expired_stories() -> List[int]:
     cursor.execute("SELECT id FROM stories WHERE expires_at < datetime('now')")
     ids = [row[0] for row in cursor.fetchall()]
     for story_id in ids:
+        cursor.execute("DELETE FROM story_reactions WHERE story_id = ?", (story_id,))
         cursor.execute("DELETE FROM story_views WHERE story_id = ?", (story_id,))
         cursor.execute("DELETE FROM story_slides WHERE story_id = ?", (story_id,))
         cursor.execute("DELETE FROM stories WHERE id = ?", (story_id,))

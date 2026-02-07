@@ -2,13 +2,28 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 const SLIDE_DURATION_MS = 4500;
 
+/** Формат времени истории для шапки */
+function formatStoryTime(createdAt) {
+  if (!createdAt) return '';
+  const d = new Date(createdAt);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const dDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const timeStr = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  if (dDate.getTime() === today.getTime()) return `сегодня в ${timeStr}`;
+  if (dDate.getTime() === yesterday.getTime()) return `вчера в ${timeStr}`;
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+}
+
 /**
  * Полноэкранный просмотр сторис.
- * stories — массив { id, authorName, avatarUrl?, slides: [ { type, url?|text?, duration_sec? } ] }.
+ * stories — массив { id, authorName, avatarUrl?, slides, created_at?, reaction_count?, user_reacted? }.
  * storyId — id текущей истории (для record view).
- * onViewRecorded(storyId) — вызвать один раз при просмотре.
+ * onViewRecorded(storyId), onReaction(storyId) — опционально.
  */
-const StoriesViewer = ({ stories = [], startStoryIndex = 0, onClose, storyId, onViewRecorded }) => {
+const StoriesViewer = ({ stories = [], startStoryIndex = 0, onClose, storyId, onViewRecorded, onReaction }) => {
   const [storyIndex, setStoryIndex] = useState(Math.min(startStoryIndex, Math.max(0, stories.length - 1)));
   const [slideIndex, setSlideIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -118,7 +133,12 @@ const StoriesViewer = ({ stories = [], startStoryIndex = 0, onClose, storyId, on
               (currentStory.authorName || '?').charAt(0).toUpperCase()
             )}
           </span>
-          <span className="stories-viewer-author">{currentStory.authorName}</span>
+          <div className="stories-viewer-header-info">
+            <span className="stories-viewer-author">{currentStory.authorName}</span>
+            {currentStory.created_at && (
+              <span className="stories-viewer-time">{formatStoryTime(currentStory.created_at)}</span>
+            )}
+          </div>
         </div>
 
         <div className="stories-viewer-slide">
@@ -141,6 +161,20 @@ const StoriesViewer = ({ stories = [], startStoryIndex = 0, onClose, storyId, on
             <p className="stories-viewer-slide-text">{currentSlide.text}</p>
           )}
         </div>
+
+        {onReaction && (
+          <div className="stories-viewer-footer">
+            <button
+              type="button"
+              className={`stories-viewer-reaction ${currentStory.user_reacted ? 'stories-viewer-reaction--active' : ''}`}
+              onClick={(e) => { e.stopPropagation(); onReaction(currentStory.id); }}
+              aria-label="Реакция"
+            >
+              ♥
+            </button>
+            <span className="stories-viewer-reaction-count">{currentStory.reaction_count ?? 0}</span>
+          </div>
+        )}
       </div>
     </div>
   );

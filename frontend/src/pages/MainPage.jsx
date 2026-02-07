@@ -22,6 +22,21 @@ function getGreeting() {
   return 'Добрый вечер';
 }
 
+/** Время публикации истории: "вчера в 11:33", "сегодня в 14:00", "15 дек." */
+function formatStoryDate(createdAt) {
+  if (!createdAt) return '';
+  const d = new Date(createdAt);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const dDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const timeStr = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  if (dDate.getTime() === today.getTime()) return `сегодня в ${timeStr}`;
+  if (dDate.getTime() === yesterday.getTime()) return `вчера в ${timeStr}`;
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+}
+
 /**
  * Главная: хедер (аватар, поиск), виджеты (расписание + QR + мероприятия),
  * карусель сторис, лента постов до бесконечности, футер в MainLayout.
@@ -112,7 +127,15 @@ const MainPage = () => {
           }
           return { type: 'text', text: s.text || '' };
         });
-        setStoryDetailForViewer({ id: story.id, authorName: story.author_name, avatarUrl: story.avatar_url || null, slides });
+        setStoryDetailForViewer({
+          id: story.id,
+          authorName: story.author_name,
+          avatarUrl: story.avatar_url || null,
+          slides,
+          created_at: story.created_at,
+          reaction_count: story.reaction_count ?? 0,
+          user_reacted: story.user_reacted ?? false,
+        });
       }
     }).catch(() => { if (!cancelled) setStoryDetailForViewer(null); });
     return () => { cancelled = true; };
@@ -239,6 +262,9 @@ const MainPage = () => {
                   )}
                 </div>
                 <Typography.Body variant="small" className="main-page-story-card-name">{story.author_name}</Typography.Body>
+                {story.created_at && (
+                  <Typography.Label variant="small" className="main-page-story-card-time">{formatStoryDate(story.created_at)}</Typography.Label>
+                )}
               </button>
             ))}
           </div>
@@ -341,6 +367,15 @@ const MainPage = () => {
           onClose={() => { setStoriesViewerIndex(null); setStoryDetailForViewer(null); }}
           storyId={storiesFeed[storiesViewerIndex]?.id}
           onViewRecorded={apiService.recordStoryView}
+          onReaction={async (sid) => {
+            try {
+              const data = await apiService.toggleStoryReaction(sid);
+              setStoryDetailForViewer((prev) => prev && prev.id === sid
+                ? { ...prev, user_reacted: data.reacted, reaction_count: data.reaction_count }
+                : prev);
+              setStoriesFeed((prev) => prev.map((s) => (s.id === sid ? { ...s, user_reacted: data.reacted, reaction_count: data.reaction_count } : s)));
+            } catch (_) {}
+          }}
         />
       )}
 
