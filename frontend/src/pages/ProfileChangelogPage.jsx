@@ -5,8 +5,6 @@ import { parseChangelog } from '../utils/parseChangelog.js';
 
 const baseUrl = typeof import.meta.env?.BASE_URL === 'string' ? import.meta.env.BASE_URL : '/';
 const icon = (name) => `${baseUrl}icons/${name}.svg`;
-
-const baseUrl = typeof import.meta.env?.BASE_URL === 'string' ? import.meta.env.BASE_URL : '/';
 const CHANGELOG_URL = `${baseUrl}CHANGELOG.md`;
 
 /**
