@@ -4557,7 +4557,7 @@ body {
   color: var(--max-text-secondary);
 }
 
-/* Истории — галерея на всю ширину по референсу (98-214) */
+/* Истории — плотная галерея по Figma 78-375 (4 колонки, без лишних отступов) */
 .profile-section-stories {
   margin: 0;
   margin-bottom: 24px;
@@ -4567,23 +4567,24 @@ body {
   background: transparent;
 }
 .profile-section-stories .profile-section-heading {
-  padding: 0 16px 0 16px;
+  padding: 0 16px;
   margin: 0 0 12px 0;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 600;
+  color: var(--max-text);
 }
 .profile-stories-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
+  gap: 2px;
   width: 100%;
-  padding: 0;
+  padding: 0 16px;
   margin: 0;
-  list-style: none;
+  box-sizing: border-box;
 }
 .profile-story-cell {
   aspect-ratio: 1;
-  border-radius: 8px;
+  border-radius: 4px;
   overflow: hidden;
   border: none;
   padding: 0;
@@ -4613,16 +4614,7 @@ body {
   color: var(--max-primary);
   border: 2px dashed var(--max-border);
   background: var(--max-bg-secondary);
-  border-radius: 8px;
-}
-.profile-page-panel .profile-section-stories {
-  margin-left: 0;
-  margin-right: 0;
-  width: 100%;
-}
-.profile-page-panel .profile-stories-grid {
-  padding: 0 16px;
-  box-sizing: border-box;
+  border-radius: 4px;
 }
 
 /* Модалка «О себе» */

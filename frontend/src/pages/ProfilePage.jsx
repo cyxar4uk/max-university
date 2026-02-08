@@ -83,8 +83,8 @@ const ProfilePage = () => {
   };
 
   return (
-    <Panel mode="secondary" className="profile-page-panel">
-      {/* Кнопка «Назад» без хедера — на фоне страницы */}
+    <Panel mode="secondary" className="profile-page-panel" data-figma="78-375">
+      {/* Макет Figma 78-375: назад на фоне, герой, 3 кнопки, Общая информация, Университет, Истории */}
       <button
         type="button"
         className="profile-back-btn"
@@ -94,7 +94,7 @@ const ProfilePage = () => {
         <img src={icon('icon-back')} alt="" width={24} height={24} />
       </button>
 
-      {/* Аватар, имя, роль — без шторки/фона, только фон страницы */}
+      {/* Аватар, имя, роль — на фоне страницы */}
       <div className="profile-hero">
         <Avatar.Container size={96} form="circle" className="profile-hero-avatar">
           {avatarUrl ? (
