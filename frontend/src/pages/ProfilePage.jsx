@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { Panel, Flex, Avatar, Typography } from '@maxhub/max-ui';
+import { Panel, Avatar, Typography } from '@maxhub/max-ui';
 import { useMAXBridge } from '../useMAXBridge.js';
 import { getDisplayUser } from '../utils/displayUser.js';
 import { useProfileLocation } from '../utils/useProfileLocation.js';
@@ -27,7 +27,7 @@ const ABOUT_STORAGE_KEY = 'profile_about_me';
 const ProfilePage = () => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.user);
-  const { userInfo } = useMAXBridge();
+  const { userInfo, showBackButton, hideBackButton, onBackButtonClick } = useMAXBridge();
   const { displayName, avatarUrl } = getDisplayUser(userInfo, user);
   const { city, loading: cityLoading, error: cityError, requestLocation } = useProfileLocation();
 
@@ -42,6 +42,13 @@ const ProfilePage = () => {
   const initial = (displayName || 'П').charAt(0).toUpperCase();
   const universityName = UNIVERSITY_NAMES[user.universityId] || 'РАНХиГС';
   const universityDirection = UNIVERSITY_DIRECTIONS[user.universityId] || '—';
+
+  // По макету 78-375: без хедера, только кнопка «Назад» на фоне. В MAX показываем нативную кнопку «Назад».
+  useEffect(() => {
+    showBackButton();
+    onBackButtonClick(() => navigate(-1));
+    return () => { hideBackButton(); };
+  }, [navigate, showBackButton, hideBackButton, onBackButtonClick]);
 
   useEffect(() => {
     let cancelled = false;

@@ -4372,9 +4372,9 @@ body {
   object-fit: contain;
 }
 
-/* Герой: аватар, имя, роль — без шторки/карточки, только фон страницы */
+/* Герой: аватар, имя, роль — по макету 78-375, на фоне страницы, хорошо виден */
 .profile-hero {
-  padding: 56px 16px 20px;
+  padding: 48px 16px 24px;
   text-align: center;
   background: transparent;
 }
@@ -4385,36 +4385,40 @@ body {
 .profile-hero-name {
   display: block;
   margin: 0 0 4px 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--max-text);
 }
 .profile-hero-role {
   display: block;
   margin: 0;
+  font-size: 0.875rem;
   color: var(--max-text-secondary);
 }
 
-/* Три кнопки — поверхность и границы из темы */
+/* Три кнопки — по макету 78-375: каждая на всю ширину, без общей рамки */
 .profile-actions-row {
   display: flex;
+  flex-direction: column;
   width: 100%;
   gap: 8px;
   padding: 0 16px 20px;
   background: transparent;
 }
 .profile-action-btn {
-  flex: 1;
+  width: 100%;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 14px 8px;
+  gap: 10px;
+  padding: 14px 16px;
   border: 1px solid var(--max-border);
   border-radius: 12px;
   background: var(--max-bg);
   cursor: pointer;
   font: inherit;
   color: var(--max-text);
-  min-width: 0;
   box-shadow: var(--max-shadow);
 }
 .profile-action-btn:hover {
@@ -4433,7 +4437,7 @@ body {
   object-fit: contain;
 }
 .profile-action-label {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--max-text);
 }
