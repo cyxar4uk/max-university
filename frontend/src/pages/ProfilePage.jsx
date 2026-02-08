@@ -125,29 +125,31 @@ const ProfilePage = () => {
         </button>
       </div>
 
-      {/* Общая информация: О себе, Город */}
+      {/* Общая информация — одна карточка с О себе и Город (как в Figma 78-385) */}
       <section className="profile-section profile-section-info">
         <Typography.Headline variant="small" className="profile-section-heading">Общая информация</Typography.Headline>
-        <div className="profile-about-block">
-          <Typography.Label variant="small" className="profile-about-label">О себе</Typography.Label>
-          <Typography.Body variant="medium" className="profile-about-text">
-            {aboutMe || 'no limits, just possibilities'}
-          </Typography.Body>
-        </div>
-        <div className="profile-city-row">
-          <Typography.Label variant="small" className="profile-city-label">Город</Typography.Label>
-          <Typography.Body variant="medium" className="profile-city-value">
-            {cityLoading ? 'Определение…' : cityError ? (
-              <button type="button" className="profile-city-request" onClick={requestLocation}>
-                Разрешить доступ к местоположению
+        <div className="profile-info-card">
+          <div className="profile-info-row-block">
+            <Typography.Label variant="small" className="profile-about-label">О себе</Typography.Label>
+            <Typography.Body variant="medium" className="profile-about-text">
+              {aboutMe || 'no limits, just possibilities'}
+            </Typography.Body>
+          </div>
+          <div className="profile-info-row-block">
+            <Typography.Label variant="small" className="profile-city-label">Город</Typography.Label>
+            <Typography.Body variant="medium" className="profile-city-value">
+              {cityLoading ? 'Определение…' : cityError ? (
+                <button type="button" className="profile-city-request" onClick={requestLocation}>
+                  Разрешить доступ к местоположению
+                </button>
+              ) : city || 'Не указан'}
+            </Typography.Body>
+            {!city && !cityLoading && !cityError && (
+              <button type="button" className="profile-city-request profile-city-request--small" onClick={requestLocation}>
+                Указать город
               </button>
-            ) : city || 'Не указан'}
-          </Typography.Body>
-          {!city && !cityLoading && !cityError && (
-            <button type="button" className="profile-city-request profile-city-request--small" onClick={requestLocation}>
-              Указать город
-            </button>
-          )}
+            )}
+          </div>
         </div>
       </section>
 

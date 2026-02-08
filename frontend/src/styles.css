@@ -4316,7 +4316,7 @@ body {
   margin-top: 8px;
 }
 
-/* Profile — без хедера, всё на фоне страницы */
+/* Profile — все цвета через переменные темы (светлая/тёмная тема) */
 .profile-page-panel {
   padding: 0 0 88px;
   min-height: 100vh;
@@ -4342,7 +4342,7 @@ body {
   color: var(--max-text);
 }
 .profile-back-btn:hover {
-  background: rgba(0, 0, 0, 0.06);
+  background: var(--max-bg-tertiary);
 }
 .profile-back-btn img {
   display: block;
@@ -4392,15 +4392,13 @@ body {
   color: var(--max-text-secondary);
 }
 
-/* Три кнопки: на всю ширину, без контейнера с фоном/рамкой (как в референсе) */
+/* Три кнопки — поверхность и границы из темы */
 .profile-actions-row {
   display: flex;
   width: 100%;
   gap: 8px;
   padding: 0 16px 20px;
   background: transparent;
-  border: none;
-  box-shadow: none;
 }
 .profile-action-btn {
   flex: 1;
@@ -4408,24 +4406,20 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   padding: 14px 8px;
-  border: none;
+  border: 1px solid var(--max-border);
   border-radius: 12px;
-  background: var(--max-primary);
+  background: var(--max-bg);
   cursor: pointer;
   font: inherit;
-  color: #fff;
+  color: var(--max-text);
   min-width: 0;
+  box-shadow: var(--max-shadow);
 }
 .profile-action-btn:hover {
-  opacity: 0.9;
-}
-.profile-action-btn .profile-action-icon img {
-  filter: brightness(0) invert(1);
-}
-.profile-action-label {
-  color: #fff;
+  background: var(--max-bg-secondary);
+  border-color: var(--max-border-light);
 }
 .profile-action-icon {
   font-size: 24px;
@@ -4439,8 +4433,9 @@ body {
   object-fit: contain;
 }
 .profile-action-label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
+  color: var(--max-text);
 }
 .profile-university-icon {
   display: flex;
@@ -4452,48 +4447,43 @@ body {
   object-fit: contain;
 }
 
-/* Общая информация: О себе, Город — без тяжёлой карточки */
+/* Общая информация — карточка, цвета из темы */
 .profile-section {
   background: transparent;
-  border-radius: 0;
-  padding: 16px 16px 12px;
+  padding: 0 16px 16px;
   margin: 0;
-  border: none;
-  box-shadow: none;
 }
 .profile-section-heading {
   display: block;
   margin: 0 0 12px 0;
   font-weight: 600;
+  font-size: 17px;
   color: var(--max-text);
 }
-.profile-about-block {
-  background: transparent;
-  border-radius: 0;
-  padding: 0 0 12px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid var(--max-border);
+.profile-info-card {
+  background: var(--max-bg);
+  border: 1px solid var(--max-border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: var(--max-shadow);
 }
-.profile-about-label {
+.profile-info-row-block {
+  margin-bottom: 14px;
+}
+.profile-info-row-block:last-child {
+  margin-bottom: 0;
+}
+.profile-about-label,
+.profile-city-label {
   display: block;
   margin-bottom: 4px;
+  font-size: 13px;
   color: var(--max-text-secondary);
 }
-.profile-about-text {
-  margin: 0;
-  color: var(--max-text);
-}
-.profile-city-row {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.profile-city-label {
-  color: var(--max-text-secondary);
-}
+.profile-about-text,
 .profile-city-value {
   margin: 0;
-  font-weight: 500;
+  font-size: 15px;
   color: var(--max-text);
 }
 .profile-city-request {
@@ -4501,6 +4491,7 @@ body {
   border: none;
   padding: 0;
   font: inherit;
+  font-size: 15px;
   color: var(--max-primary);
   cursor: pointer;
   text-align: left;
@@ -4511,7 +4502,7 @@ body {
   margin-top: 4px;
 }
 
-/* Блок Университет (клик → Учеба) — в границах экрана */
+/* Блок Университет — карточка, цвета из темы */
 .profile-university-block {
   display: flex;
   align-items: center;
@@ -4519,19 +4510,20 @@ body {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  padding: 14px 16px;
+  padding: 16px;
   margin: 0 16px 12px;
-  background: var(--max-bg-secondary);
+  background: var(--max-bg);
   border: 1px solid var(--max-border);
   border-radius: 12px;
   cursor: pointer;
   text-align: left;
   font: inherit;
-  color: inherit;
+  color: var(--max-text);
+  box-shadow: var(--max-shadow);
 }
 .profile-university-block:hover {
-  background: var(--max-bg-tertiary);
-  border-color: var(--max-border-strong);
+  background: var(--max-bg-secondary);
+  border-color: var(--max-border-light);
 }
 .profile-university-icon {
   flex-shrink: 0;
@@ -4619,8 +4611,8 @@ body {
   font-size: 32px;
   font-weight: 300;
   color: var(--max-primary);
-  border: 2px dashed rgba(0, 136, 204, 0.5);
-  background: rgba(0, 136, 204, 0.08);
+  border: 2px dashed var(--max-border);
+  background: var(--max-bg-secondary);
   border-radius: 8px;
 }
 .profile-page-panel .profile-section-stories {
