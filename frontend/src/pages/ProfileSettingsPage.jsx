@@ -1,9 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { Panel, Button, Typography } from '@maxhub/max-ui';
+import { Panel, Typography } from '@maxhub/max-ui';
+import { useMAXBridge } from '../useMAXBridge.js';
+import { getDisplayUser } from '../utils/displayUser.js';
 import UserSwitcher from '../UserSwitcher.jsx';
 import { setRole } from '../userSlice.js';
+
+const baseUrl = typeof import.meta.env?.BASE_URL === 'string' ? import.meta.env.BASE_URL : '/';
+const icon = (name) => `${baseUrl}icons/${name}.svg`;
 
 const roleNames = {
   student: 'Студент',
@@ -26,6 +31,8 @@ const ProfileSettingsPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const user = useSelector((state) => state.user);
+  const { userInfo } = useMAXBridge();
+  const { displayName } = getDisplayUser(userInfo, user);
   const [universitySelectOpen, setUniversitySelectOpen] = useState(false);
   const ref = useRef(null);
 
@@ -50,17 +57,21 @@ const ProfileSettingsPage = () => {
 
   return (
     <Panel mode="secondary" className="profile-page-panel profile-settings-page">
-      <header className="profile-header-only">
+      <header className="profile-figma-header">
         <button type="button" className="profile-header-back" onClick={() => navigate(-1)} aria-label="Назад">
           ‹
         </button>
+        <div className="profile-figma-header-center">
+          <Typography.Headline variant="small" className="profile-figma-header-name">{displayName}</Typography.Headline>
+          <Typography.Body variant="small" className="profile-figma-header-role">{currentRoleLabel}</Typography.Body>
+        </div>
+        <div className="profile-figma-header-right">
+          <img src={icon('iconsettings')} alt="" width={20} height={20} aria-hidden />
+          <Typography.Action variant="small" className="profile-figma-header-label">Настройки</Typography.Action>
+        </div>
       </header>
 
       <div className="profile-settings-content">
-        <section className="profile-settings-block">
-          <span className="profile-settings-icon">⚙️</span>
-          <Typography.Body variant="medium">Настройки</Typography.Body>
-        </section>
 
         <section className="profile-settings-block profile-settings-testing">
           <Typography.Headline variant="small" className="profile-settings-block-title">Тестирование</Typography.Headline>
