@@ -1,68 +1,80 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
 import { Panel, Typography } from '@maxhub/max-ui';
-import { useMAXBridge } from '../useMAXBridge.js';
-import { getDisplayUser } from '../utils/displayUser.js';
+import { parseChangelog } from '../utils/parseChangelog.js';
 
 const baseUrl = typeof import.meta.env?.BASE_URL === 'string' ? import.meta.env.BASE_URL : '/';
 const icon = (name) => `${baseUrl}icons/${name}.svg`;
 
-const roleNames = { student: 'Студент', applicant: 'Абитуриент', employee: 'Сотрудник', teacher: 'Учитель', admin: 'Администратор' };
+const baseUrl = typeof import.meta.env?.BASE_URL === 'string' ? import.meta.env.BASE_URL : '/';
+const CHANGELOG_URL = `${baseUrl}CHANGELOG.md`;
 
-const CHANGELOG = [
-  {
-    version: 'v1.0.2',
-    title: 'Bug fix #2',
-    items: [
-      'Исправлено отображение историй пользователей',
-      'Обновлен профиль пользователя',
-      'Добавлена интеграция с внешними мероприятиями',
-    ],
-  },
-  {
-    version: 'v1.0.1',
-    title: 'Bug fix #1',
-    items: [
-      'Исправлено отображение историй пользователей',
-      'Обновлен профиль пользователя',
-      'Добавлена интеграция с внешними мероприятиями',
-    ],
-  },
-];
-
+/**
+ * Экран «Что нового»: загружает CHANGELOG.md из репозитория (public/CHANGELOG.md)
+ * и отображает версии. Файл можно синхронизировать с корневым CHANGELOG.md в git.
+ */
 const ProfileChangelogPage = () => {
   const navigate = useNavigate();
-  const user = useSelector((state) => state.user);
-  const { userInfo } = useMAXBridge();
-  const { displayName } = getDisplayUser(userInfo, user);
-  const currentRoleLabel = user.role ? (roleNames[user.role] || user.role) : '—';
+  const [releases, setReleases] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(CHANGELOG_URL)
+      .then((r) => (r.ok ? r.text() : Promise.reject(new Error('Not found'))))
+      .then((text) => {
+        if (!cancelled) setReleases(parseChangelog(text));
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setError(e.message);
+          setReleases([]);
+        }
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <Panel mode="secondary" className="profile-changelog-page">
-      <header className="profile-figma-header">
-        <button type="button" className="profile-header-back" onClick={() => navigate(-1)} aria-label="Назад">‹</button>
-        <div className="profile-figma-header-center">
-          <Typography.Headline variant="small" className="profile-figma-header-name">{displayName}</Typography.Headline>
-          <Typography.Body variant="small" className="profile-figma-header-role">{currentRoleLabel}</Typography.Body>
-        </div>
-        <div className="profile-figma-header-right">
-          <img src={icon('iconsettings')} alt="" width={20} height={20} aria-hidden />
-          <Typography.Action variant="small" className="profile-figma-header-label">Настройки / Что нового</Typography.Action>
-        </div>
+      <header className="profile-header-only">
+        <button type="button" className="profile-header-back" onClick={() => navigate(-1)} aria-label="Назад">
+          <img src={icon('icon-back')} alt="" width={24} height={24} />
+        </button>
       </header>
       <div className="profile-changelog-content">
-        <Typography.Headline variant="medium" className="profile-changelog-title">Что нового</Typography.Headline>
-        {CHANGELOG.map((release) => (
+        <Typography.Headline variant="medium" className="profile-changelog-title">
+          Что нового
+        </Typography.Headline>
+        {loading && <p className="profile-changelog-loading">Загрузка…</p>}
+        {error && (
+          <p className="profile-changelog-error">
+            Не удалось загрузить список версий. Проверьте подключение к интернету.
+          </p>
+        )}
+        {!loading && !error && releases.length === 0 && (
+          <p className="profile-changelog-empty">Пока нет записей о версиях.</p>
+        )}
+        {!loading && releases.map((release) => (
           <div key={release.version} className="profile-changelog-card">
             <Typography.Body variant="medium-strong" className="profile-changelog-version">
-              {release.version} {release.title}
+              {release.version} {release.title && `— ${release.title}`}
             </Typography.Body>
-            <ul className="profile-changelog-list">
-              {release.items.map((item, i) => (
-                <li key={i}><Typography.Body variant="small">{item}</Typography.Body></li>
-              ))}
-            </ul>
+            {release.date && (
+              <Typography.Label variant="small" className="profile-changelog-date">
+                {release.date}
+              </Typography.Label>
+            )}
+            {release.items.length > 0 && (
+              <ul className="profile-changelog-list">
+                {release.items.map((item, i) => (
+                  <li key={i}>
+                    <Typography.Body variant="small">{item}</Typography.Body>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         ))}
       </div>

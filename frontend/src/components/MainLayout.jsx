@@ -6,7 +6,8 @@ const baseUrl = typeof import.meta.env?.BASE_URL === 'string' ? import.meta.env.
 const icon = (name) => `${baseUrl}icons/${name}.svg`;
 
 /**
- * Layout with bottom navigation: Главная | Хаб | Учёба | Профиль (по макету Figma).
+ * Layout with bottom navigation: Главная | Хаб | Учёба.
+ * Wraps all main app screens after login.
  */
 const MainLayout = () => {
   const navigate = useNavigate();
@@ -25,15 +26,11 @@ const MainLayout = () => {
     path.startsWith('/admission') ||
     path === '/events' ||
     path === '/news';
-  const isProfile =
-    path === '/profile' ||
-    path.startsWith('/profile/');
 
   const handleNavTo = (route) => {
     if (route === '/home' && path === '/home') return;
     if (route === '/hub' && path === '/hub') return;
     if (route === '/study' && isStudy) return;
-    if (route === '/profile' && isProfile) return;
     navigate(route);
   };
 
@@ -43,7 +40,7 @@ const MainLayout = () => {
         <Outlet />
       </main>
 
-      <nav className="bottom-nav bottom-nav-four">
+      <nav className="bottom-nav bottom-nav-three">
         <button
           className={`nav-item ${isMain ? 'active' : ''}`}
           onClick={() => handleNavTo('/home')}
@@ -73,16 +70,6 @@ const MainLayout = () => {
             <img src={icon('iconedu')} alt="" width={24} height={24} />
           </span>
           <Typography.Action variant="small" className="nav-label">Учёба</Typography.Action>
-        </button>
-        <button
-          className={`nav-item ${isProfile ? 'active' : ''}`}
-          onClick={() => handleNavTo('/profile')}
-          aria-label="Профиль"
-        >
-          <span className="nav-icon nav-icon-svg" aria-hidden>
-            <img src={icon('iconprofile')} alt="" width={24} height={24} />
-          </span>
-          <Typography.Action variant="small" className="nav-label">Профиль</Typography.Action>
         </button>
       </nav>
     </div>

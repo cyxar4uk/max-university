@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0"
+    "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "sync-changelog": "node -e \"const fs=require('fs'); const p=require('path'); const src=p.join(__dirname,'..','CHANGELOG.md'); const dest=p.join(__dirname,'public','CHANGELOG.md'); if(fs.existsSync(src)) fs.copyFileSync(src,dest); console.log('CHANGELOG synced');\""
   },
   "dependencies": {
     "@maxhub/max-ui": "^0.1.12",

@@ -8,6 +8,9 @@ import { useProfileLocation } from '../utils/useProfileLocation.js';
 import apiService from '../api-service.js';
 import StoriesViewer from '../components/StoriesViewer.jsx';
 
+const baseUrl = typeof import.meta.env?.BASE_URL === 'string' ? import.meta.env.BASE_URL : '/';
+const icon = (name) => `${baseUrl}icons/${name}.svg`;
+
 const roleNames = {
   student: 'Студент',
   applicant: 'Абитуриент',
@@ -89,7 +92,7 @@ const ProfilePage = () => {
           onClick={() => navigate(-1)}
           aria-label="Назад"
         >
-          ‹
+          <img src={icon('icon-back')} alt="" width={24} height={24} />
         </button>
       </header>
 
@@ -111,15 +114,15 @@ const ProfilePage = () => {
       {/* Три кнопки: История, Изменить, Настройки */}
       <div className="profile-actions-row">
         <button type="button" className="profile-action-btn" onClick={() => navigate('/create-story')}>
-          <span className="profile-action-icon">📸</span>
+          <span className="profile-action-icon"><img src={icon('icon-camera')} alt="" width={24} height={24} /></span>
           <span className="profile-action-label">История</span>
         </button>
         <button type="button" className="profile-action-btn" onClick={() => { setAboutEditValue(aboutMe); setAboutEditOpen(true); }}>
-          <span className="profile-action-icon">✏️</span>
+          <span className="profile-action-icon"><img src={icon('icon-edit')} alt="" width={24} height={24} /></span>
           <span className="profile-action-label">Изменить</span>
         </button>
         <button type="button" className="profile-action-btn" onClick={() => navigate('/profile/settings')}>
-          <span className="profile-action-icon">⚙️</span>
+          <span className="profile-action-icon"><img src={icon('icon-settings')} alt="" width={24} height={24} /></span>
           <span className="profile-action-label">Настройки</span>
         </button>
       </div>
@@ -152,7 +155,7 @@ const ProfilePage = () => {
 
       {/* Блок Университет — по клику переход в раздел Учеба */}
       <button type="button" className="profile-university-block" onClick={() => navigate('/study')}>
-        <span className="profile-university-icon">🎓</span>
+        <span className="profile-university-icon"><img src={icon('icon-university')} alt="" width={28} height={28} /></span>
         <div className="profile-university-text">
           <Typography.Label variant="small" className="profile-university-label">Университет</Typography.Label>
           <Typography.Body variant="medium-strong">{universityName}</Typography.Body>
