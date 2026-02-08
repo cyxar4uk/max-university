@@ -4396,29 +4396,29 @@ body {
   color: var(--max-text-secondary);
 }
 
-/* Три кнопки — по макету 78-375: каждая на всю ширину, без общей рамки */
+/* Три кнопки — поверхность и границы из темы */
 .profile-actions-row {
   display: flex;
-  flex-direction: column;
   width: 100%;
   gap: 8px;
   padding: 0 16px 20px;
   background: transparent;
 }
 .profile-action-btn {
-  width: 100%;
+  flex: 1;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 14px 16px;
+  gap: 8px;
+  padding: 14px 8px;
   border: 1px solid var(--max-border);
   border-radius: 12px;
   background: var(--max-bg);
   cursor: pointer;
   font: inherit;
   color: var(--max-text);
+  min-width: 0;
   box-shadow: var(--max-shadow);
 }
 .profile-action-btn:hover {
@@ -4437,7 +4437,7 @@ body {
   object-fit: contain;
 }
 .profile-action-label {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--max-text);
 }
