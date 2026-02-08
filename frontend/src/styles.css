@@ -4316,7 +4316,447 @@ body {
   margin-top: 8px;
 }
 
-/* Profile My stories */
+/* Profile — отдельный хедер (только «Назад»), не на одном уровне с аватаркой */
+.profile-page-panel {
+  padding-bottom: 88px;
+  min-height: 100vh;
+  background: var(--max-bg-secondary);
+}
+.profile-header-only {
+  background: var(--max-bg);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--max-border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.profile-header-back {
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: none;
+  font-size: 28px;
+  line-height: 1;
+  color: var(--max-text);
+  cursor: pointer;
+  padding: 0;
+  border-radius: var(--max-radius-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.profile-header-back:hover {
+  background: var(--max-bg-secondary);
+}
+
+/* Герой: аватар, имя, роль (по центру) */
+.profile-hero {
+  background: var(--max-bg);
+  padding: 24px 16px 28px;
+  text-align: center;
+  border-radius: 0 0 var(--max-radius) var(--max-radius);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.profile-hero-avatar {
+  margin: 0 auto 16px;
+  display: block;
+}
+.profile-hero-name {
+  display: block;
+  margin: 0 0 4px 0;
+}
+.profile-hero-role {
+  display: block;
+  margin: 0;
+  color: var(--max-text-secondary);
+}
+
+/* Три кнопки: История, Изменить, Настройки */
+.profile-actions-row {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px 16px;
+  background: var(--max-bg);
+  margin: 0 16px;
+  margin-top: -8px;
+  border-radius: var(--max-radius);
+  border: 1px solid var(--max-border);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.profile-action-btn {
+  flex: 1;
+  max-width: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border: 1px solid var(--max-border);
+  border-radius: var(--max-radius);
+  background: var(--max-bg);
+  cursor: pointer;
+  font: inherit;
+  color: var(--max-text);
+}
+.profile-action-btn:hover {
+  background: var(--max-bg-secondary);
+  border-color: var(--max-border-strong);
+}
+.profile-action-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+.profile-action-label {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Общая информация: О себе, Город */
+.profile-section {
+  background: var(--max-bg);
+  border-radius: var(--max-radius);
+  padding: 16px;
+  margin: 0 16px 12px;
+  border: 1px solid var(--max-border);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.profile-section-heading {
+  display: block;
+  margin: 0 0 12px 0;
+  font-weight: 600;
+  color: var(--max-text);
+}
+.profile-about-block {
+  background: var(--max-bg-secondary);
+  border-radius: var(--max-radius);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+.profile-about-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--max-text-secondary);
+}
+.profile-about-text {
+  margin: 0;
+  color: var(--max-text);
+}
+.profile-city-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.profile-city-label {
+  color: var(--max-text-secondary);
+}
+.profile-city-value {
+  margin: 0;
+  font-weight: 500;
+  color: var(--max-text);
+}
+.profile-city-request {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--max-primary);
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+}
+.profile-city-request--small {
+  font-size: var(--max-font-size-sm);
+  margin-top: 4px;
+}
+
+/* Блок Университет (клик → Учеба) */
+.profile-university-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 16px;
+  margin: 0 16px 12px;
+  background: var(--max-bg-secondary);
+  border: 1px solid var(--max-border);
+  border-radius: var(--max-radius);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.profile-university-block:hover {
+  background: var(--max-bg-tertiary);
+  border-color: var(--max-border-strong);
+}
+.profile-university-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+.profile-university-text {
+  flex: 1;
+  min-width: 0;
+}
+.profile-university-label {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--max-text-secondary);
+}
+.profile-university-direction {
+  display: block;
+  margin-top: 2px;
+  color: var(--max-text-secondary);
+}
+.profile-university-chevron {
+  font-size: 20px;
+  color: var(--max-text-secondary);
+}
+
+/* Сетка историй */
+.profile-section-stories {
+  margin-bottom: 24px;
+}
+.profile-stories-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.profile-story-cell {
+  aspect-ratio: 1;
+  border-radius: var(--max-radius-xs);
+  overflow: hidden;
+  border: 1px solid var(--max-border);
+  padding: 0;
+  background: var(--max-bg-secondary);
+  cursor: pointer;
+}
+.profile-story-cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.profile-story-cell-placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--max-bg-tertiary);
+}
+.profile-story-cell-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: var(--max-primary);
+  border: 2px dashed var(--max-border);
+  background: var(--max-bg);
+}
+
+/* Модалка «О себе» */
+.profile-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.profile-modal {
+  background: var(--max-bg);
+  border-radius: var(--max-radius);
+  padding: 20px;
+  max-width: 360px;
+  width: 100%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+.profile-modal-textarea {
+  width: 100%;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--max-border);
+  border-radius: var(--max-radius-xs);
+  font: inherit;
+  font-size: 15px;
+  resize: vertical;
+  min-height: 80px;
+  box-sizing: border-box;
+}
+.profile-modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.profile-modal-btn {
+  padding: 10px 16px;
+  border-radius: var(--max-radius-xs);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--max-border);
+  background: var(--max-bg);
+  color: var(--max-text);
+}
+.profile-modal-btn--primary {
+  background: var(--max-primary);
+  color: #fff;
+  border-color: var(--max-primary);
+}
+.profile-modal-btn--secondary:hover {
+  background: var(--max-bg-secondary);
+}
+
+/* Страница настроек профиля */
+.profile-settings-page .profile-header-only {
+  margin-bottom: 0;
+}
+.profile-settings-content {
+  padding: 16px;
+}
+.profile-settings-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  background: var(--max-bg-secondary);
+  border: 1px solid var(--max-border);
+  border-radius: var(--max-radius);
+}
+.profile-settings-block-title {
+  display: block;
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: var(--max-text);
+}
+.profile-settings-icon {
+  font-size: 22px;
+}
+.profile-settings-testing {
+  flex-direction: column;
+  align-items: stretch;
+}
+.profile-settings-testing-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--max-border);
+}
+.profile-settings-testing-row:last-of-type {
+  border-bottom: none;
+}
+.profile-settings-btn-secondary {
+  padding: 8px 14px;
+  border: 1px solid var(--max-border);
+  border-radius: var(--max-radius-xs);
+  background: var(--max-bg);
+  font: inherit;
+  font-size: 14px;
+  color: var(--max-text);
+  cursor: pointer;
+}
+.profile-settings-btn-secondary:hover {
+  background: var(--max-bg-secondary);
+}
+.profile-settings-university-switcher {
+  position: relative;
+}
+.profile-settings-university-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin: 4px 0 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--max-bg);
+  border: 1px solid var(--max-border);
+  border-radius: var(--max-radius);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  min-width: 140px;
+  z-index: 10;
+}
+.profile-settings-university-dropdown button {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--max-radius-xs);
+}
+.profile-settings-university-dropdown button:hover,
+.profile-settings-university-dropdown button.active {
+  background: var(--max-bg-secondary);
+}
+.profile-settings-link-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  background: var(--max-bg-secondary);
+  border: 1px solid var(--max-border);
+  border-radius: var(--max-radius);
+  cursor: pointer;
+  font: inherit;
+  color: var(--max-text);
+  text-align: left;
+}
+.profile-settings-link-row:hover {
+  background: var(--max-bg-tertiary);
+}
+.profile-settings-chevron {
+  font-size: 18px;
+  color: var(--max-text-secondary);
+}
+.profile-settings-dot {
+  position: absolute;
+  right: 36px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--max-danger);
+}
+
+/* Что нового (changelog) */
+.profile-changelog-page .profile-header-only {
+  margin-bottom: 0;
+}
+.profile-changelog-content {
+  padding: 16px;
+}
+.profile-changelog-title {
+  margin-bottom: 16px;
+}
+.profile-changelog-card {
+  background: var(--max-bg-secondary);
+  border: 1px solid var(--max-border);
+  border-radius: var(--max-radius);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.profile-changelog-version {
+  display: block;
+  margin-bottom: 8px;
+}
+.profile-changelog-list {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--max-text-secondary);
+}
+.profile-changelog-list li {
+  margin-bottom: 4px;
+}
+
+/* Profile My stories (legacy, kept for compatibility) */
 .profile-my-stories {
   display: flex;
   flex-direction: column;

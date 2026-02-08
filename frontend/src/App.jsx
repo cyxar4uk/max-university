@@ -16,6 +16,8 @@ import WelcomePage from './pages/WelcomePage.jsx';
 import MainPage from './pages/MainPage.jsx';
 import HubPage from './pages/HubPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
+import ProfileSettingsPage from './pages/ProfileSettingsPage.jsx';
+import ProfileChangelogPage from './pages/ProfileChangelogPage.jsx';
 import SchedulePage from './pages/SchedulePage.jsx';
 import CoursesPage from './pages/CoursesPage.jsx';
 import CoursePage from './pages/CoursePage.jsx';
@@ -132,6 +134,8 @@ function App() {
             <Route path="hub" element={<HubPage />} />
             <Route path="study" element={<StudyGate />} />
             <Route path="profile" element={<ProfilePage />} />
+            <Route path="profile/settings" element={<ProfileSettingsPage />} />
+            <Route path="profile/changelog" element={<ProfileChangelogPage />} />
             <Route path="create-story" element={<CreateStoryPage />} />
             <Route path="schedule" element={<SchedulePage />} />
             <Route path="courses" element={<CoursesPage />} />

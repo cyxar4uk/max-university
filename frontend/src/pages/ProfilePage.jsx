@@ -1,21 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import {
-  Panel,
-  Container,
-  Flex,
-  Avatar,
-  Typography,
-  CellList,
-  CellHeader,
-  CellSimple,
-  CellAction,
-  Button,
-} from '@maxhub/max-ui';
+import { Panel, Flex, Avatar, Typography } from '@maxhub/max-ui';
 import { useMAXBridge } from '../useMAXBridge.js';
 import { getDisplayUser } from '../utils/displayUser.js';
-import UserSwitcher from '../UserSwitcher.jsx';
+import { useProfileLocation } from '../utils/useProfileLocation.js';
 import apiService from '../api-service.js';
 import StoriesViewer from '../components/StoriesViewer.jsx';
 
@@ -27,17 +16,29 @@ const roleNames = {
   admin: 'Администратор',
 };
 
+const UNIVERSITY_NAMES = { 1: 'РАНХиГС', 2: 'МГУ', 3: 'ВШЭ' };
+const UNIVERSITY_DIRECTIONS = { 1: 'Бизнес-информатика', 2: '—', 3: '—' };
+
+const ABOUT_STORAGE_KEY = 'profile_about_me';
+
 const ProfilePage = () => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.user);
   const { userInfo } = useMAXBridge();
   const { displayName, avatarUrl } = getDisplayUser(userInfo, user);
+  const { city, loading: cityLoading, error: cityError, requestLocation } = useProfileLocation();
+
+  const [aboutMe, setAboutMe] = useState(() => localStorage.getItem(ABOUT_STORAGE_KEY) || '');
+  const [aboutEditOpen, setAboutEditOpen] = useState(false);
+  const [aboutEditValue, setAboutEditValue] = useState('');
   const [myStories, setMyStories] = useState([]);
   const [viewerStoryId, setViewerStoryId] = useState(null);
   const [storyDetailForViewer, setStoryDetailForViewer] = useState(null);
 
   const currentRoleLabel = user.role ? (roleNames[user.role] || user.role) : null;
   const initial = (displayName || 'П').charAt(0).toUpperCase();
+  const universityName = UNIVERSITY_NAMES[user.universityId] || 'РАНХиГС';
+  const universityDirection = UNIVERSITY_DIRECTIONS[user.universityId] || '—';
 
   useEffect(() => {
     let cancelled = false;
@@ -72,132 +73,146 @@ const ProfilePage = () => {
     return () => { cancelled = true; };
   }, [viewerStoryId]);
 
+  const saveAboutMe = () => {
+    setAboutMe(aboutEditValue);
+    localStorage.setItem(ABOUT_STORAGE_KEY, aboutEditValue);
+    setAboutEditOpen(false);
+  };
+
   return (
     <Panel mode="secondary" className="profile-page-panel">
-      <header className="profile-page-header">
-        <Button
-          mode="tertiary"
-          appearance="neutral"
-          size="small"
-          className="profile-page-back"
+      {/* Отдельный хедер — только кнопка «Назад», не на одном уровне с аватаркой */}
+      <header className="profile-header-only">
+        <button
+          type="button"
+          className="profile-header-back"
           onClick={() => navigate(-1)}
           aria-label="Назад"
         >
           ‹
-        </Button>
+        </button>
       </header>
 
-      <Container className="profile-page-hero">
-        <Flex direction="column" align="center" gap={16}>
-          <Avatar.Container size={96} form="circle" className="profile-page-avatar-wrap">
-            {avatarUrl ? (
-              <Avatar.Image src={avatarUrl} alt="" fallback={initial} />
-            ) : (
-              <Avatar.Text gradient="blue">{initial}</Avatar.Text>
-            )}
-          </Avatar.Container>
-          <Flex direction="column" align="center" gap={4}>
-            <Typography.Headline variant="large-strong">{displayName}</Typography.Headline>
-            {currentRoleLabel && (
-              <Typography.Body variant="small" className="profile-page-role">
-                {currentRoleLabel}
-              </Typography.Body>
-            )}
-          </Flex>
-        </Flex>
-      </Container>
+      {/* Герой: аватар, имя, роль */}
+      <div className="profile-hero">
+        <Avatar.Container size={96} form="circle" className="profile-hero-avatar">
+          {avatarUrl ? (
+            <Avatar.Image src={avatarUrl} alt="" fallback={initial} />
+          ) : (
+            <Avatar.Text gradient="blue">{initial}</Avatar.Text>
+          )}
+        </Avatar.Container>
+        <Typography.Headline variant="large-strong" className="profile-hero-name">{displayName}</Typography.Headline>
+        {currentRoleLabel && (
+          <Typography.Body variant="small" className="profile-hero-role">{currentRoleLabel}</Typography.Body>
+        )}
+      </div>
 
-      <Flex direction="column" gap={16} className="profile-page-sections">
-        {/* Мои истории */}
-        <CellList mode="island" header={<CellHeader>Мои истории</CellHeader>}>
-          <div className="profile-my-stories">
-            <div className="profile-my-stories-track">
-              <button
-                type="button"
-                className="profile-my-story-card profile-my-story-card-add"
-                onClick={() => navigate('/create-story')}
-                aria-label="Добавить историю"
-              >
-                +
+      {/* Три кнопки: История, Изменить, Настройки */}
+      <div className="profile-actions-row">
+        <button type="button" className="profile-action-btn" onClick={() => navigate('/create-story')}>
+          <span className="profile-action-icon">📸</span>
+          <span className="profile-action-label">История</span>
+        </button>
+        <button type="button" className="profile-action-btn" onClick={() => { setAboutEditValue(aboutMe); setAboutEditOpen(true); }}>
+          <span className="profile-action-icon">✏️</span>
+          <span className="profile-action-label">Изменить</span>
+        </button>
+        <button type="button" className="profile-action-btn" onClick={() => navigate('/profile/settings')}>
+          <span className="profile-action-icon">⚙️</span>
+          <span className="profile-action-label">Настройки</span>
+        </button>
+      </div>
+
+      {/* Общая информация: О себе, Город */}
+      <section className="profile-section profile-section-info">
+        <Typography.Headline variant="small" className="profile-section-heading">Общая информация</Typography.Headline>
+        <div className="profile-about-block">
+          <Typography.Label variant="small" className="profile-about-label">О себе</Typography.Label>
+          <Typography.Body variant="medium" className="profile-about-text">
+            {aboutMe || 'no limits, just possibilities'}
+          </Typography.Body>
+        </div>
+        <div className="profile-city-row">
+          <Typography.Label variant="small" className="profile-city-label">Город</Typography.Label>
+          <Typography.Body variant="medium" className="profile-city-value">
+            {cityLoading ? 'Определение…' : cityError ? (
+              <button type="button" className="profile-city-request" onClick={requestLocation}>
+                Разрешить доступ к местоположению
               </button>
-              {myStories.map((story) => (
-                <button
-                  key={story.id}
-                  type="button"
-                  className="profile-my-story-card"
-                  onClick={() => setViewerStoryId(story.id)}
-                >
-                  {story.cover_url ? (
-                    <img src={apiService.getStoryMediaUrl(story.cover_url)} alt="" />
-                  ) : (
-                    <div className="profile-my-story-card-add" style={{ height: 80 }} />
-                  )}
-                  <Typography.Label variant="small" style={{ display: 'block', padding: 4 }}>
-                    {story.view_count ?? 0} просмотров
-                  </Typography.Label>
-                </button>
-              ))}
-            </div>
-            {myStories.length === 0 && (
-              <Typography.Body variant="small" className="profile-section-note">
-                Создайте первую историю — она будет отображаться 24 часа.
-              </Typography.Body>
-            )}
-          </div>
-        </CellList>
+            ) : city || 'Не указан'}
+          </Typography.Body>
+          {!city && !cityLoading && !cityError && (
+            <button type="button" className="profile-city-request profile-city-request--small" onClick={requestLocation}>
+              Указать город
+            </button>
+          )}
+        </div>
+      </section>
 
-        {/* Общая информация */}
-        <CellList
-          mode="island"
-          header={
-            <CellHeader
-              after={
-                <Button mode="tertiary" appearance="themed" size="small" onClick={() => {}}>
-                  Изменить
-                </Button>
-              }
+      {/* Блок Университет — по клику переход в раздел Учеба */}
+      <button type="button" className="profile-university-block" onClick={() => navigate('/study')}>
+        <span className="profile-university-icon">🎓</span>
+        <div className="profile-university-text">
+          <Typography.Label variant="small" className="profile-university-label">Университет</Typography.Label>
+          <Typography.Body variant="medium-strong">{universityName}</Typography.Body>
+          <Typography.Body variant="small" className="profile-university-direction">{universityDirection}</Typography.Body>
+        </div>
+        <span className="profile-university-chevron">›</span>
+      </button>
+
+      {/* Истории */}
+      <section className="profile-section profile-section-stories">
+        <Typography.Headline variant="small" className="profile-section-heading">Истории</Typography.Headline>
+        <div className="profile-stories-grid">
+          <button
+            type="button"
+            className="profile-story-cell profile-story-cell-add"
+            onClick={() => navigate('/create-story')}
+            aria-label="Добавить историю"
+          >
+            +
+          </button>
+          {myStories.map((story) => (
+            <button
+              key={story.id}
+              type="button"
+              className="profile-story-cell"
+              onClick={() => setViewerStoryId(story.id)}
             >
-              Общая информация
-            </CellHeader>
-          }
-        >
-          <CellSimple height="compact" title="Университет" subtitle="РАНХиГС" showChevron />
-          <CellSimple height="compact" title="Направление" subtitle="Бизнес-информатика" showChevron />
-          <CellSimple height="compact" title="Курс" subtitle="1 курс" showChevron />
-        </CellList>
+              {story.cover_url ? (
+                <img src={apiService.getStoryMediaUrl(story.cover_url)} alt="" />
+              ) : (
+                <span className="profile-story-cell-placeholder" />
+              )}
+            </button>
+          ))}
+        </div>
+      </section>
 
-        {/* Тестирование / Смена роли */}
-        {user.canChangeRole !== false && (
-          <CellList mode="island" header={<CellHeader>Тестирование</CellHeader>}>
-            <Flex align="center" justify="space-between" className="profile-section-role-row">
-              <Typography.Body variant="medium">{currentRoleLabel || '—'}</Typography.Body>
-              <UserSwitcher />
-            </Flex>
-          </CellList>
-        )}
-
-        {user.canChangeRole === false && (
-          <Container className="profile-section--muted">
-            <Typography.Body variant="small" className="profile-section-note">
-              Вы вошли по коду приглашения. Смена роли недоступна.
-            </Typography.Body>
-          </Container>
-        )}
-
-        {/* Помощь и поддержка */}
-        <CellList mode="island">
-          <CellAction onClick={() => {}} showChevron>
-            Помощь и поддержка
-          </CellAction>
-        </CellList>
-
-        {/* Что нового */}
-        <CellList mode="island">
-          <CellAction onClick={() => {}} showChevron>
-            Что нового
-          </CellAction>
-        </CellList>
-      </Flex>
+      {/* Модалка редактирования «О себе» */}
+      {aboutEditOpen && (
+        <div className="profile-modal-backdrop" onClick={() => setAboutEditOpen(false)}>
+          <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
+            <Typography.Headline variant="small">О себе</Typography.Headline>
+            <textarea
+              className="profile-modal-textarea"
+              value={aboutEditValue}
+              onChange={(e) => setAboutEditValue(e.target.value)}
+              placeholder="Расскажите о себе..."
+              rows={4}
+            />
+            <div className="profile-modal-actions">
+              <button type="button" className="profile-modal-btn profile-modal-btn--secondary" onClick={() => setAboutEditOpen(false)}>
+                Отмена
+              </button>
+              <button type="button" className="profile-modal-btn profile-modal-btn--primary" onClick={saveAboutMe}>
+                Сохранить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {viewerStoryId != null && storyDetailForViewer && (
         <StoriesViewer
