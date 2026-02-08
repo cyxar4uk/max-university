@@ -84,19 +84,17 @@ const ProfilePage = () => {
 
   return (
     <Panel mode="secondary" className="profile-page-panel">
-      {/* Отдельный хедер — только кнопка «Назад», не на одном уровне с аватаркой */}
-      <header className="profile-header-only">
-        <button
-          type="button"
-          className="profile-header-back"
-          onClick={() => navigate(-1)}
-          aria-label="Назад"
-        >
-          <img src={icon('icon-back')} alt="" width={24} height={24} />
-        </button>
-      </header>
+      {/* Кнопка «Назад» без хедера — на фоне страницы */}
+      <button
+        type="button"
+        className="profile-back-btn"
+        onClick={() => navigate(-1)}
+        aria-label="Назад"
+      >
+        <img src={icon('icon-back')} alt="" width={24} height={24} />
+      </button>
 
-      {/* Герой: аватар, имя, роль */}
+      {/* Аватар, имя, роль — без шторки/фона, только фон страницы */}
       <div className="profile-hero">
         <Avatar.Container size={96} form="circle" className="profile-hero-avatar">
           {avatarUrl ? (
