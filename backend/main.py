@@ -1360,6 +1360,7 @@ async def get_hub_sources():
 # External events API (ивенты): proxy to events project API when EVENTS_API_URL is set
 EVENTS_API_URL = os.environ.get("EVENTS_API_URL", "").rstrip("/")
 EVENTS_BOT_LINK = os.environ.get("EVENTS_BOT_LINK", "https://t.me/event_ranepa_bot")
+EVENTS_API_SECRET = os.environ.get("EVENTS_API_SECRET", "").strip()
 
 @app.get("/api/external/events")
 async def get_external_events(limit: Optional[int] = 10):
@@ -1378,6 +1379,71 @@ async def get_external_events(limit: Optional[int] = 10):
     except Exception as e:
         print(f"External events proxy error: {e}")
         return {"events": [], "bot_link": EVENTS_BOT_LINK}
+
+@app.get("/api/external/events/{event_id}")
+async def get_external_event_detail(event_id: str):
+    """Подробности мероприятия (для кнопки «Подробнее»). Proxy to external API."""
+    if not EVENTS_API_URL:
+        raise HTTPException(status_code=404, detail="External events API not configured")
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            r = await client.get(f"{EVENTS_API_URL}/events/{event_id}")
+            r.raise_for_status()
+            return r.json()
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail="Event not found")
+    except Exception as e:
+        print(f"External event detail proxy error: {e}")
+        raise HTTPException(status_code=502, detail="Failed to load event detail")
+
+class ExternalEventRegisterBody(BaseModel):
+    """Тело запроса регистрации на мероприятие (данные пользователя MAX → бот мероприятий)."""
+    telegram_id: Optional[int] = None  # Если пользователь привязал Telegram
+    max_user_id: Optional[int] = None  # ID в MAX (можно передать как telegram_id для связи)
+    username: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    event_id: str
+
+@app.post("/api/external/events/register")
+async def register_external_event(
+    body: ExternalEventRegisterBody,
+    user_id: Optional[int] = Header(None, alias="X-MAX-User-ID"),
+    first_name: Optional[str] = Header(None, alias="X-MAX-First-Name"),
+    last_name: Optional[str] = Header(None, alias="X-MAX-Last-Name"),
+    username: Optional[str] = Header(None, alias="X-MAX-Username"),
+):
+    """
+    Регистрация на мероприятие в боте мероприятий (RANEPA).
+    Передаются: telegram_id (или max_user_id как fallback), username, first_name, last_name, event_id.
+    Требует EVENTS_API_SECRET и EVENTS_API_URL.
+    """
+    if not EVENTS_API_URL or not EVENTS_API_SECRET:
+        raise HTTPException(status_code=503, detail="External event registration is not configured (EVENTS_API_URL, EVENTS_API_SECRET)")
+    telegram_id = body.telegram_id or body.max_user_id or user_id
+    if telegram_id is None:
+        raise HTTPException(status_code=400, detail="telegram_id or max_user_id or X-MAX-User-ID required")
+    payload = {
+        "telegram_id": int(telegram_id),
+        "username": body.username or username,
+        "first_name": body.first_name or first_name,
+        "last_name": body.last_name or last_name,
+        "event_id": body.event_id,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(
+                f"{EVENTS_API_URL}/register",
+                json=payload,
+                headers={"X-Events-Api-Key": EVENTS_API_SECRET, "Content-Type": "application/json"},
+            )
+            r.raise_for_status()
+            return r.json()
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=e.response.text or "Registration failed")
+    except Exception as e:
+        print(f"External event register proxy error: {e}")
+        raise HTTPException(status_code=502, detail="Registration request failed")
 
 @app.get("/api/statistics")
 async def get_statistics(user_id: Optional[int] = None):

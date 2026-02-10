@@ -483,7 +483,7 @@ class UniversityAPIService {
     }
   }
 
-  // Внешний API мероприятий (ивенты) для виджетов Главная/Хаб
+  // Внешний API мероприятий (ивенты) для виджетов Главная/Хаб — бот мероприятий RANEPA
   async getExternalEvents(limit = 10) {
     try {
       const response = await this.client.get('/external/events', { params: { limit } });
@@ -492,6 +492,26 @@ class UniversityAPIService {
       console.error('Get external events error:', error);
       return { events: [], bot_link: 'https://t.me/event_ranepa_bot' };
     }
+  }
+
+  // Подробности одного мероприятия (для кнопки «Подробнее»)
+  async getExternalEventDetail(eventId) {
+    try {
+      const response = await this.client.get(`/external/events/${eventId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get external event detail error:', error);
+      throw error;
+    }
+  }
+
+  // Регистрация на мероприятие в боте мероприятий (опционально, если передан telegram_id)
+  async registerExternalEvent(eventId, payload = {}) {
+    const response = await this.client.post('/external/events/register', {
+      event_id: eventId,
+      ...payload,
+    });
+    return response.data;
   }
 
   // Получение событий
