@@ -20,7 +20,7 @@ import json
 import hmac
 import hashlib
 import httpx
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 import shutil
 import sqlite3
@@ -1325,6 +1325,56 @@ async def get_news():
 
 # Hub feed: proxy to cold_news feed API (optional; if not set, return empty feed)
 COLD_NEWS_FEED_URL = os.environ.get("COLD_NEWS_FEED_URL", "http://localhost:3001")
+HUB_FEED_EXCLUDED_SOURCE_ID = "1924118717"  # Исключаем все посты от этого источника
+
+# Моковые новости для ленты (образование, списки учащихся и т.д.)
+HUB_FEED_MOCK_POSTS = [
+    {
+        "id": -1,
+        "channel": "Приёмная комиссия",
+        "channelUsername": "Приёмная комиссия",
+        "text": "Опубликованы списки зачисленных учащихся на 2025/26 учебный год. Ознакомиться с приказами можно в личном кабинете и на стендах приёмной комиссии.",
+        "date": (datetime.utcnow() - timedelta(hours=2)).isoformat() + "Z",
+        "tema": ["поступление", "списки"],
+    },
+    {
+        "id": -2,
+        "channel": "Учебный отдел",
+        "channelUsername": "Учебный отдел",
+        "text": "Напоминаем о сроках пересдачи сессии: заявления принимаются до конца недели. Расписание консультаций размещено в LMS.",
+        "date": (datetime.utcnow() - timedelta(hours=5)).isoformat() + "Z",
+        "tema": ["сессия", "учёба"],
+    },
+    {
+        "id": -3,
+        "channel": "Новости образования",
+        "channelUsername": "Новости образования",
+        "text": "В российских вузах стартуют программы дополнительного образования по цифровым компетенциям. Студентам доступны бесплатные курсы по аналитике данных и программированию.",
+        "date": (datetime.utcnow() - timedelta(days=1)).isoformat() + "Z",
+        "tema": ["образование", "курсы"],
+    },
+    {
+        "id": -4,
+        "channel": "Библиотека",
+        "channelUsername": "Библиотека",
+        "text": "Открыта запись на мастер-класс по работе с научными базами данных. Занятие пройдёт в читальном зале в среду в 15:00.",
+        "date": (datetime.utcnow() - timedelta(days=1, hours=6)).isoformat() + "Z",
+        "tema": ["библиотека", "мастер-класс"],
+    },
+]
+
+
+def _is_post_from_excluded_source(post: dict) -> bool:
+    """Проверяет, что пост от источника 1924118717 (исключаем из ленты)."""
+    sid = HUB_FEED_EXCLUDED_SOURCE_ID
+    for key in ("channel_id", "source_id", "channel", "source"):
+        val = post.get(key)
+        if val is None:
+            continue
+        if str(val) == sid or (isinstance(val, int) and str(val) == sid):
+            return True
+    return False
+
 
 @app.get("/api/hub/feed")
 async def get_hub_feed(
@@ -1332,7 +1382,7 @@ async def get_hub_feed(
     offset: Optional[int] = 0,
     channel: Optional[str] = None,
 ):
-    """Proxy to cold_news feed API for Hub page."""
+    """Proxy to cold_news feed API for Hub page. Исключаем источник 1924118717, добавляем моковые новости."""
     try:
         params = {"limit": min(limit or 20, 100), "offset": offset or 0}
         if channel:
@@ -1340,7 +1390,21 @@ async def get_hub_feed(
         async with httpx.AsyncClient(timeout=10.0) as client:
             r = await client.get(f"{COLD_NEWS_FEED_URL}/api/feed", params=params)
             r.raise_for_status()
-            return r.json()
+            data = r.json()
+        raw_posts = data.get("posts", [])
+        total = data.get("total", len(raw_posts))
+
+        # Убираем все посты от источника 1924118717
+        posts = [p for p in raw_posts if not _is_post_from_excluded_source(p)]
+        removed = len(raw_posts) - len(posts)
+        total = max(0, total - removed)
+
+        # На первой странице в начало ленты добавляем моковые новости
+        if offset == 0 or offset is None:
+            posts = list(HUB_FEED_MOCK_POSTS) + posts
+            total += len(HUB_FEED_MOCK_POSTS)
+
+        return {"posts": posts, "total": total}
     except Exception as e:
         print(f"Hub feed proxy error: {e}")
         return {"posts": [], "total": 0}
