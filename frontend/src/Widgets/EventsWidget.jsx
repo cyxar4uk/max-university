@@ -8,9 +8,12 @@ const EventsWidget = ({ block, apiService: apiServiceProp }) => {
   const user = useSelector((state) => state.user);
   const api = apiServiceProp || apiService;
   const [events, setEvents] = useState([]);
+  const [externalEvents, setExternalEvents] = useState([]);
+  const [useExternal, setUseExternal] = useState(false);
   const [registeredEvents, setRegisteredEvents] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [externalDetail, setExternalDetail] = useState(null);
   const [showGallery, setShowGallery] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [universityName, setUniversityName] = useState('Центральный университет');
@@ -19,20 +22,24 @@ const EventsWidget = ({ block, apiService: apiServiceProp }) => {
     const loadEvents = async () => {
       try {
         const universityId = user.universityId || parseInt(localStorage.getItem('universityId') || '1');
-        const data = await api.getEvents(universityId);
-        setEvents(data.events || []);
-        
-        // Загружаем информацию об университете
+        const external = await api.getExternalEvents(10);
+        const externalList = external.events || [];
+        if (externalList.length > 0) {
+          setExternalEvents(externalList);
+          setUseExternal(true);
+          setEvents([]);
+        } else {
+          const data = await api.getEvents(universityId);
+          setEvents(data.events || []);
+        }
+
         try {
           const uniData = await api.getUniversity(universityId);
-          if (uniData.name) {
-            setUniversityName(uniData.name);
-          }
+          if (uniData?.name) setUniversityName(uniData.name);
         } catch (e) {
           console.warn('Could not load university name');
         }
 
-        // Загружаем список зарегистрированных событий
         try {
           const registrations = await api.getUserEventRegistrations();
           setRegisteredEvents(new Set(registrations.event_ids || []));
@@ -52,13 +59,28 @@ const EventsWidget = ({ block, apiService: apiServiceProp }) => {
 
   const handleEventClick = (event) => {
     setSelectedEvent(event);
+    setExternalDetail(null);
     setShowGallery(true);
     setCurrentImageIndex(0);
+  };
+
+  const handleExternalDetail = async (event) => {
+    setSelectedEvent(null);
+    setExternalDetail(null);
+    setShowGallery(true);
+    try {
+      const detail = await api.getExternalEventDetail(event.id);
+      setExternalDetail(detail);
+    } catch (e) {
+      console.error('Error loading external event detail:', e);
+      setExternalDetail({ error: true, name: event.name || event.title });
+    }
   };
 
   const handleCloseGallery = () => {
     setShowGallery(false);
     setSelectedEvent(null);
+    setExternalDetail(null);
   };
 
   const handleRegister = async (eventId, e) => {
@@ -150,6 +172,74 @@ const EventsWidget = ({ block, apiService: apiServiceProp }) => {
         <div className="widget-content">
           {loading ? (
             <div className="widget-loading">Загрузка...</div>
+          ) : useExternal && externalEvents.length > 0 ? (
+            <div className="events-carousel">
+              <div className="events-carousel-track">
+                {externalEvents.map((event, index) => {
+                  const title = event.name || event.title || 'Мероприятие';
+                  const dateStr = event.date
+                    ? new Date(event.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+                    : '';
+                  const dateEndStr = event.date_end
+                    ? new Date(event.date_end).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+                    : '';
+                  const bgStyle = event.banner_url
+                    ? { backgroundImage: `url(${event.banner_url})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+                    : { background: getEventImage({}, index) };
+                  return (
+                    <div key={event.id} className="event-card">
+                      <div className="event-card-background" style={bgStyle}>
+                        <div className="event-card-overlay"></div>
+                      </div>
+                      <div className="event-card-content">
+                        <div className="event-card-header">
+                          <div className="event-card-logo">{universityName.toUpperCase()}</div>
+                          <div className="event-card-badge">• РЕГИСТРАЦИЯ ОТКРЫТА</div>
+                        </div>
+                        <div className="event-card-graphic">
+                          <div className="event-card-graphic-screen">
+                            <div className="event-card-title-main">{title}</div>
+                            {(dateStr || dateEndStr) && (
+                              <div className="event-card-date">
+                                {dateStr}
+                                {dateEndStr && dateEndStr !== dateStr ? ` – ${dateEndStr}` : ''}
+                              </div>
+                            )}
+                            {event.location && (
+                              <div className="event-card-location">📍 {event.location}</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="event-card-footer">
+                          <div className="event-card-description">
+                            {event.description_short || 'Мероприятие академии'}
+                          </div>
+                          <div className="event-card-actions">
+                            {event.bot_link && (
+                              <a
+                                href={event.bot_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="event-card-action-btn event-card-action-participate"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                Записаться
+                              </a>
+                            )}
+                            <div
+                              className="event-card-action-btn event-card-more"
+                              onClick={(e) => { e.stopPropagation(); handleExternalDetail(event); }}
+                            >
+                              Подробнее
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           ) : events.length > 0 ? (
             <div className="events-carousel">
               <div className="events-carousel-track">
@@ -232,8 +322,59 @@ const EventsWidget = ({ block, apiService: apiServiceProp }) => {
         </div>
       </div>
 
-      {/* Галерея с подробной информацией */}
-      {showGallery && selectedEvent && (
+      {/* Галерея: детали внешнего мероприятия */}
+      {showGallery && externalDetail && (
+        <div className="event-gallery-overlay" onClick={handleCloseGallery}>
+          <div className="event-gallery-content" onClick={(e) => e.stopPropagation()}>
+            <button className="event-gallery-close" onClick={handleCloseGallery}>×</button>
+            {externalDetail.error ? (
+              <div className="event-gallery-detail">
+                <h3>{externalDetail.name}</h3>
+                <p>Не удалось загрузить описание.</p>
+              </div>
+            ) : (
+              <div className="event-gallery-detail">
+                {externalDetail.banner_url && (
+                  <div className="event-gallery-detail-banner">
+                    <img src={externalDetail.banner_url} alt="" />
+                  </div>
+                )}
+                <h3>{externalDetail.name || externalDetail.title}</h3>
+                {(externalDetail.date || externalDetail.date_end) && (
+                  <p className="event-gallery-detail-date">
+                    📅 {externalDetail.date
+                      ? new Date(externalDetail.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+                      : ''}
+                    {externalDetail.date_end && (
+                      <> – {new Date(externalDetail.date_end).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}</>
+                    )}
+                  </p>
+                )}
+                {externalDetail.location && (
+                  <p className="event-gallery-detail-location">📍 {externalDetail.location}</p>
+                )}
+                {externalDetail.description && (
+                  <div className="event-gallery-detail-description">{externalDetail.description}</div>
+                )}
+                {externalDetail.bot_link && (
+                  <a
+                    href={externalDetail.bot_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="event-card-action-btn event-card-action-participate"
+                    style={{ display: 'inline-block', marginTop: '1rem' }}
+                  >
+                    Записаться
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Галерея с подробной информацией (внутренние события) */}
+      {showGallery && selectedEvent && !externalDetail && (
         <div className="event-gallery-overlay" onClick={handleCloseGallery}>
           <div className="event-gallery-content" onClick={(e) => e.stopPropagation()}>
             <button className="event-gallery-close" onClick={handleCloseGallery}>×</button>
