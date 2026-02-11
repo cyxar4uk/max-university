@@ -388,7 +388,7 @@ def get_main_menu_keyboard(role: str) -> Dict:
                     {"text": "📰 Новости", "callback_data": "block_news"}
                 ],
                 [
-                    {"text": "🌐 Панель администратора", "web_app": {"url": "https://cyxar4uk.github.io/max-university/?role=admin"}}
+                    {"text": "🌐 Открыть приложение", "web_app": {"url": "https://cyxar4uk.github.io/max-university/?role=admin"}}
                 ]
             ]
         }
@@ -687,7 +687,7 @@ def get_role_name(role: str) -> str:
         "student": "Студент",
         "teacher": "Преподаватель",
         "employee": "Сотрудник",
-        "admin": "Администратор",
+        "admin": "Родитель",
     }
     return roles.get(role, role)
 
