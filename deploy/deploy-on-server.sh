@@ -75,7 +75,7 @@ if [ -d "$REPO_ROOT/services/max-bot" ]; then
   cd "$REPO_ROOT/services/max-bot"
   npm install --omit=dev 2>/dev/null || true
   npm run build 2>/dev/null || true
-  (systemctl restart max-university-bot 2>/dev/null) || true
+  (sudo systemctl restart max-university-bot 2>/dev/null) || true
   echo "max-bot done."
 fi
 
