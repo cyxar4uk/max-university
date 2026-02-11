@@ -73,7 +73,7 @@ fi
 if [ -d "$REPO_ROOT/services/max-bot" ]; then
   echo "Building and restarting max-bot..."
   cd "$REPO_ROOT/services/max-bot"
-  npm install --omit=dev 2>/dev/null || true
+  npm install 2>/dev/null || true
   npm run build 2>/dev/null || true
   (sudo systemctl restart max-university-bot 2>/dev/null) || true
   echo "max-bot done."

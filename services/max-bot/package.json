@@ -5,7 +5,7 @@
   "main": "dist/bot.js",
   "scripts": {
     "postinstall": "node scripts/postinstall.js",
-    "build": "tsc",
+    "build": "npx tsc",
     "start": "node dist/bot.js",
     "dev": "ts-node src/bot.ts"
   },
