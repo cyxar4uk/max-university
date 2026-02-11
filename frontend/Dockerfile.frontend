@@ -12,6 +12,10 @@ RUN npm ci
 # Копируем исходный код
 COPY . .
 
+# URL API при сборке: по умолчанию /api (одна ссылка: фронт и API с одного домена)
+ARG VITE_API_URL=/api
+ENV VITE_API_URL=$VITE_API_URL
+
 # Собираем приложение
 RUN npm run build
 

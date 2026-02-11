@@ -12,7 +12,7 @@ for name in (".env.events", ".env.database", ".env", ".env.bot"):
 
 from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks, Request, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import uvicorn
@@ -694,7 +694,24 @@ def get_role_name(role: str) -> str:
 # ============ API ДЛЯ MINI-APP (как раньше) ============
 
 @app.get("/")
-async def root():
+async def root(request: Request):
+    """Главная: в браузере — HTML со ссылками, для API — JSON."""
+    accept = (request.headers.get("accept") or "").lower()
+    if "text/html" in accept:
+        return HTMLResponse(
+            """<!DOCTYPE html><html><head><meta charset="utf-8"><title>MAX Backend</title>
+            <style>body{font-family:sans-serif;max-width:600px;margin:3rem auto;padding:0 1rem;}
+            h1{color:#333;} a{color:#0066cc;} ul{margin:1rem 0;} li{margin:0.5rem 0;}</style></head>
+            <body>
+            <h1>MAX Backend</h1>
+            <p>Digital University MAX Bot + Mini-App — работает.</p>
+            <ul>
+            <li><a href="/api/external/events">Мероприятия</a> (список из API мероприятий)</li>
+            <li><a href="/docs">Swagger /docs</a></li>
+            <li><a href="/redoc">ReDoc /redoc</a></li>
+            </ul>
+            </body></html>"""
+        )
     return {"message": "Digital University MAX Bot + Mini-App", "status": "running"}
 
 def get_user_id_from_headers(x_max_user_id: Optional[str] = Header(None)) -> int:
@@ -1427,22 +1444,54 @@ EVENTS_BOT_LINK = os.environ.get("EVENTS_BOT_LINK", "https://t.me/event_ranepa_b
 EVENTS_API_SECRET = os.environ.get("EVENTS_API_SECRET", "").strip()
 
 @app.get("/api/external/events")
-async def get_external_events(limit: Optional[int] = 10):
-    """Proxy to external events API (Public Events API). Returns list of events and bot_link."""
+async def get_external_events(request: Request, limit: Optional[int] = 10):
+    """Proxy to external events API (Public Events API). Returns list of events and bot_link. In browser returns HTML."""
     if not EVENTS_API_URL:
-        return {"events": [], "bot_link": EVENTS_BOT_LINK}
-    limit = min(limit or 10, 50)
-    try:
-        async with httpx.AsyncClient(timeout=8.0) as client:
-            r = await client.get(f"{EVENTS_API_URL}/events", params={"limit": limit})
-            r.raise_for_status()
-            data = r.json()
-            if isinstance(data, list):
-                return {"events": data, "bot_link": EVENTS_BOT_LINK}
-            return {"events": data.get("events", data.get("items", [])), "bot_link": data.get("bot_link", EVENTS_BOT_LINK)}
-    except Exception as e:
-        print(f"External events proxy error: {e}")
-        return {"events": [], "bot_link": EVENTS_BOT_LINK}
+        data = {"events": [], "bot_link": EVENTS_BOT_LINK}
+    else:
+        limit_val = min(limit or 10, 50)
+        try:
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                r = await client.get(f"{EVENTS_API_URL}/events", params={"limit": limit_val})
+                r.raise_for_status()
+                raw = r.json()
+                if isinstance(raw, list):
+                    data = {"events": raw, "bot_link": EVENTS_BOT_LINK}
+                else:
+                    data = {"events": raw.get("events", raw.get("items", [])), "bot_link": raw.get("bot_link", EVENTS_BOT_LINK)}
+        except Exception as e:
+            print(f"External events proxy error: {e}")
+            data = {"events": [], "bot_link": EVENTS_BOT_LINK}
+
+    accept = (request.headers.get("accept") or "").lower()
+    if "text/html" in accept or request.query_params.get("format") == "html":
+        events = data.get("events", [])
+        bot_link = data.get("bot_link", EVENTS_BOT_LINK)
+        html_parts = [
+            "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Мероприятия (MAX)</title>",
+            "<style>body{font-family:sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem;}",
+            "h1{color:#333;} .event{margin:1.5rem 0;padding:1rem;border:1px solid #eee;border-radius:8px;}",
+            ".event h3{margin-top:0;} .event a{color:#0066cc;}</style></head><body>",
+            "<h1>Мероприятия (MAX → API мероприятий)</h1>",
+            f"<p>Всего: {len(events)}</p>",
+        ]
+        for e in events:
+            title = (e.get("title") or e.get("name") or "Мероприятие")
+            date_str = (e.get("date") or "")[:10]
+            date_end = (e.get("date_end") or "")[:10] if e.get("date_end") else ""
+            location = e.get("location") or "—"
+            link = e.get("bot_link") or bot_link
+            html_parts.append(
+                f"<div class='event'>"
+                f"<h3>{title}</h3>"
+                f"<p>📅 {date_str}" + (f" – {date_end}" if date_end else "") + "</p>"
+                f"<p>📍 {location}</p>"
+                f"<p><a href='{link}'>Записаться</a></p>"
+                "</div>"
+            )
+        html_parts.append(f"<p><small>JSON: <a href='?format=json'>?format=json</a></small></p></body></html>")
+        return HTMLResponse("".join(html_parts))
+    return data
 
 @app.get("/api/external/events/{event_id}")
 async def get_external_event_detail(event_id: str):
