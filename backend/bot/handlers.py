@@ -21,7 +21,7 @@ def get_role_name(role: str) -> str:
         "student": "Студент",
         "teacher": "Преподаватель",
         "employee": "Сотрудник",
-        "admin": "Администратор",
+        "admin": "Родитель",
     }
     return roles.get(role, role)
 

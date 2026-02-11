@@ -118,7 +118,7 @@ def get_main_menu_keyboard(role: str) -> Dict:
                     {"text": "👥 Пользователи", "callback_data": "block_users"},
                     {"text": "📰 Новости", "callback_data": "block_news"}
                 ],
-                [{"text": "🌐 Панель администратора", "web_app": {"url": f"{MINI_APP_URL}?role=admin"}}]
+                [{"text": "🌐 Открыть приложение", "web_app": {"url": f"{MINI_APP_URL}?role=admin"}}]
             ]
         }
     }
