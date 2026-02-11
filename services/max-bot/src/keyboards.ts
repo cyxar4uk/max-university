@@ -2,7 +2,7 @@ import { Keyboard } from '@maxhub/max-bot-api';
 
 const MINI_APP_URL = process.env.MINI_APP_URL?.replace(/\/$/, '') || '';
 
-/** Клавиатура выбора роли: 4 кнопки — Абитуриент, Студент, Сотрудник, Администрация */
+/** Клавиатура выбора роли: 4 кнопки — Абитуриент, Студент, Сотрудник, Родитель */
 export function roleSelectionKeyboard() {
   return Keyboard.inlineKeyboard([
     [
@@ -11,7 +11,7 @@ export function roleSelectionKeyboard() {
     ],
     [
       Keyboard.button.callback('Сотрудник', 'role_employee'),
-      Keyboard.button.callback('Администрация', 'role_admin'),
+      Keyboard.button.callback('Родитель', 'role_admin'),
     ],
   ]);
 }
@@ -28,7 +28,7 @@ export const ROLE_NAMES: Record<string, string> = {
   applicant: 'Абитуриент',
   student: 'Студент',
   employee: 'Сотрудник',
-  admin: 'Администрация',
+  admin: 'Родитель',
 };
 
 export function getRoleName(role: string): string {

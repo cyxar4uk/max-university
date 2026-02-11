@@ -60,7 +60,7 @@ bot.command('role', (ctx: Context) => {
 /* ----- bot_started (запуск бота / открытие чата с ботом) — то же приветствие и выбор роли ----- */
 bot.on('bot_started', (ctx: Context & { startPayload?: string }) => sendWelcome(ctx));
 
-/* ----- Выбор роли: нажатие на callback-кнопку (Абитуриент / Студент / Сотрудник / Администрация) ----- */
+/* ----- Выбор роли: нажатие на callback-кнопку (Абитуриент / Студент / Сотрудник / Родитель) ----- */
 bot.action(/^role_(.+)$/, async (ctx: Context & { match?: string[] }) => {
   const role = ctx.match?.[1] ?? '';
   const userId = ctx.user?.user_id ?? ctx.chatId;
